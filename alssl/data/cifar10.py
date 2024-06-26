@@ -18,6 +18,11 @@ dino_transform = transforms.Compose(
 )
 
 
+def get_dataset(subset="train", transform=dino_transform):
+    assert subset in ["train", "test"]
+    return ImageFolder(DATA_PATH / subset, transform=transform)
+
+
 def get_data_loaders(
     val_size: int | float,
     *,
@@ -25,6 +30,7 @@ def get_data_loaders(
     random_seed: int = 42,
     num_workers: int = 4,
     transform=dino_transform,
+    shuffle=False,
 ) -> Iterable[DataLoader]:
     torch.manual_seed(random_seed)
 
@@ -37,7 +43,9 @@ def get_data_loaders(
     train_size = len(train_ds) - int(val_size)
     train_ds, val_ds = random_split(train_ds, [train_size, val_size])
 
-    train_dl = DataLoader(train_ds, batch_size, shuffle=True, num_workers=num_workers)
+    train_dl = DataLoader(
+        train_ds, batch_size, shuffle=shuffle, num_workers=num_workers
+    )
     val_dl = DataLoader(val_ds, batch_size, num_workers=num_workers)
     test_dl = DataLoader(test_ds, batch_size, num_workers=num_workers)
 

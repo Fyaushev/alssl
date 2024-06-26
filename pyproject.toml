@@ -1,0 +1,24 @@
+[project]
+name = 'alssl'
+readme = 'README.md'
+requires-python = '>=3.10'
+dynamic = ['version', 'dependencies']
+
+[project.scripts]
+alssl = 'alssl.running_code.entrypoint:main'
+
+[build-system]
+requires = ['setuptools>=43.0.0', 'wheel']
+build-backend = 'setuptools.build_meta'
+
+[tool.setuptools.packages.find]
+include = ['alssl']
+
+[tool.setuptools.package-data]
+'alssl' = [
+    '**/*.py',
+]
+
+[tool.setuptools.dynamic]
+version = { attr = 'alssl.__version__.__version__' }
+dependencies = { file = ['requirements.txt'] }
