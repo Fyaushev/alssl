@@ -1,9 +1,9 @@
 import lightning as L
 import torch
 from torch import nn
-from transformers import AutoModel
+from torch.optim.lr_scheduler import OneCycleLR, ReduceLROnPlateau
 from torchmetrics.functional import accuracy
-from torch.optim.lr_scheduler import ReduceLROnPlateau
+from transformers import AutoModel
 
 
 class DinoClassifier(nn.Module):
@@ -31,6 +31,8 @@ class LightningDino(L.LightningModule):
         self,
         learning_rate=0.001,
         num_classes=10,
+        scheduler_kwargs={},
+        optimizer_kwargs={},
     ):
         super().__init__()
         self.model = DinoClassifier()
@@ -38,14 +40,20 @@ class LightningDino(L.LightningModule):
         self.validation_losses = []
         self.criterion = nn.CrossEntropyLoss()
         self.num_classes = num_classes
+        self.scheduler_kwargs = scheduler_kwargs
+        self.optimizer_kwargs = optimizer_kwargs
 
     def forward(self, x):
         return self.model(x)
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
-        scheduler = ReduceLROnPlateau(optimizer)
-        return [optimizer], [scheduler]
+        optimizer = torch.optim.AdamW(
+            self.model.parameters(), lr=self.learning_rate, **self.optimizer_kwargs
+        )
+        # scheduler = ReduceLROnPlateau(optimizer)  # "monitor": "train_loss"
+        scheduler = OneCycleLR(optimizer, **self.scheduler_kwargs)
+
+        return [optimizer], [{"scheduler": scheduler, "interval": "epoch"}]
 
     def training_step(self, batch, batch_idx):
         images, labels = batch
