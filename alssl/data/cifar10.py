@@ -81,7 +81,7 @@ class CIFAR10LightningDataModule(L.LightningDataModule):
         )
 
         save(train_ids, "train_ids.json")
-        save(val_ids, "val_ids_ids.json")
+        save(val_ids, "val_ids.json")
 
         self.train_dataset = Subset(train_dataset, train_ids)
         self.val_dataset = Subset(train_dataset, val_ids)
