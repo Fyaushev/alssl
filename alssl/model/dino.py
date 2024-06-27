@@ -11,13 +11,7 @@ class DinoClassifier(nn.Module):
         super(DinoClassifier, self).__init__()
         self.transformer = AutoModel.from_pretrained("facebook/dinov2-base")
         self.classifier = nn.Sequential(
-            nn.Linear(768, 512),
-            nn.ReLU(),
-            nn.Linear(512, 256),
-            nn.ReLU(),
-            nn.Linear(256, 128),
-            nn.ReLU(),
-            nn.Linear(128, 10),
+            nn.Linear(768, 512), nn.ReLU(), nn.Linear(512, 10)
         )
 
     def forward(self, x):
@@ -50,30 +44,46 @@ class LightningDino(L.LightningModule):
         optimizer = torch.optim.AdamW(
             self.model.parameters(), lr=self.learning_rate, **self.optimizer_kwargs
         )
-        # scheduler = ReduceLROnPlateau(optimizer)  # "monitor": "train_loss"
-        scheduler = OneCycleLR(optimizer, **self.scheduler_kwargs)
+        scheduler = ReduceLROnPlateau(optimizer)  # "monitor": "train_loss"
+        # scheduler = OneCycleLR(optimizer, **self.scheduler_kwargs)
 
-        return [optimizer], [{"scheduler": scheduler, "interval": "epoch"}]
+        return [optimizer], [
+            {"scheduler": scheduler, "interval": "epoch", "monitor": "train_loss"}
+        ]
 
     def training_step(self, batch, batch_idx):
         images, labels = batch
-        outputs = self(images)
-        loss = self.criterion(outputs, labels)
-        self.log("train_loss", loss)
+        logits = self(images)
+
+        loss = self.criterion(logits, labels)
+        acc = self._calculate_accuracy(logits, labels)
+
+        self.log("train_loss", loss, prog_bar=True, on_epoch=True, on_step=False)
+        self.log("train_acc", acc, prog_bar=True, on_epoch=True, on_step=False)
         return loss
 
     def validation_step(self, batch, batch_idx):
-        val_images, val_labels = batch
-        val_logits = self(val_images)
+        images, labels = batch
+        logits = self(images)
 
-        val_loss = self.criterion(val_logits, val_labels)
-        self.log("val_loss", val_loss, prog_bar=True)
+        loss = self.criterion(logits, labels)
+        acc = self._calculate_accuracy(logits, labels)
 
-        val_acc = accuracy(
-            torch.argmax(val_logits, dim=1),
-            val_labels,
+        self.log("val_loss", loss, prog_bar=True, on_epoch=True, on_step=False)
+        self.log("val_acc", acc, prog_bar=True, on_epoch=True, on_step=False)
+        return loss
+
+    def test_step(self, batch, batch_idx):
+        images, labels = batch
+        logits = self(images)
+
+        acc = self._calculate_accuracy(logits, labels)
+        self.log("test_acc", acc, on_epoch=True, on_step=False)
+
+    def _calculate_accuracy(self, logits, labels):
+        return accuracy(
+            torch.argmax(logits, dim=1),
+            labels,
             task="multiclass",
             num_classes=self.num_classes,
         )
-        self.log("val_acc", val_acc, prog_bar=True)
-        return val_loss
