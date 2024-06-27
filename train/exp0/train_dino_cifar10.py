@@ -13,7 +13,7 @@ from alssl.model.dino import LightningDino
 exp_name = "exp10"
 batch_size = 100
 num_epochs = 2000
-learning_rate = 3e-4
+learning_rate = 1e-3
 
 random_state = 0
 trains_size = 950
@@ -30,9 +30,9 @@ train_transform = transforms.Compose(
         transforms.ToTensor(),
         transforms.RandomCrop(32, padding=4),
         transforms.RandomHorizontalFlip(),
-        transforms.RandomRotation(10),
         # transforms.RandomAffine(0, shear=10, scale=(0.8, 1.2)),
         transforms.Resize((224, 224), antialias=True),
+        transforms.RandomRotation(10),
         transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
     ]
 )
@@ -61,12 +61,8 @@ trainer = Trainer(callbacks=[checkpoint_lr_monitor])
 
 model = LightningDino(
     learning_rate=learning_rate,
-    optimizer_kwargs={"weight_decay": 1e-1},
-    scheduler_kwargs={
-        # "max_lr": 1e-2,
-        # "epochs": num_epochs,
-        # "steps_per_epoch": len(data_module.train_dataloader()),
-    },
+    optimizer_kwargs={"weight_decay": 1},
+    scheduler_kwargs={"factor": 0.5},
 )
 trainer = L.Trainer(
     max_epochs=num_epochs,

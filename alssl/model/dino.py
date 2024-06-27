@@ -44,7 +44,7 @@ class LightningDino(L.LightningModule):
         optimizer = torch.optim.AdamW(
             self.model.parameters(), lr=self.learning_rate, **self.optimizer_kwargs
         )
-        scheduler = ReduceLROnPlateau(optimizer)  # "monitor": "train_loss"
+        scheduler = ReduceLROnPlateau(optimizer, **self.scheduler_kwargs)  # "monitor": "train_loss"
         # scheduler = OneCycleLR(optimizer, **self.scheduler_kwargs)
 
         return [optimizer], [
