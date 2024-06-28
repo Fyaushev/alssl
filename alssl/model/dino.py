@@ -1,7 +1,7 @@
 import lightning as L
 import torch
 from torch import nn
-from torch.optim.lr_scheduler import OneCycleLR, ReduceLROnPlateau
+from torch.optim.lr_scheduler import OneCycleLR, ReduceLROnPlateau, MultiStepLR
 from torchmetrics.functional import accuracy
 from transformers import AutoModel
 
@@ -17,6 +17,51 @@ class DinoClassifier(nn.Module):
     def forward(self, x):
         embeddings = self.transformer(x).pooler_output
         logits = self.classifier(embeddings)
+        return logits
+
+
+class LinearClassifierToken(torch.nn.Module):
+    def __init__(self, in_channels=768, num_classes=1, token_w=32, token_h=32):
+        super(LinearClassifierToken, self).__init__()
+        self.in_channels = in_channels
+
+        self.width = token_w
+        self.height = token_h
+
+        self.num_classes = num_classes
+
+        self.classifier = torch.nn.Conv2d(in_channels, num_classes, (1, 1))
+
+    def forward(self, embeddings):
+        embeddings = embeddings.reshape(-1, self.height, self.width, self.in_channels)
+        embeddings = embeddings.permute(0, 3, 1, 2)
+        return self.classifier(embeddings)
+
+
+class DinoSemanticSegmentation(torch.nn.Module):
+    def __init__(
+        self,
+        *,
+        embedding_dim=768,
+        num_classes=1,
+        token_w=32,  # the size of the input image should be 448 by 448
+        token_h=32,
+        pretrained_model_name="facebook/dinov2-base",
+    ):
+        super(DinoSemanticSegmentation, self).__init__()
+        self.transformer = AutoModel.from_pretrained(pretrained_model_name)
+        self.linear_classifiers = LinearClassifierToken(
+            embedding_dim, num_classes, token_w, token_h
+        )
+
+    def forward(self, image):
+        outputs = self.transformer(image)
+        patch_embeddings = outputs.last_hidden_state[:, 1:, :]
+        logits = self.linear_classifiers(patch_embeddings)
+        logits = torch.nn.functional.interpolate(
+            logits, size=image.shape[2:], mode="bilinear", align_corners=False
+        )
+
         return logits
 
 
