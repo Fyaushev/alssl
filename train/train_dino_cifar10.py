@@ -7,13 +7,13 @@ from lightning.pytorch.loggers import WandbLogger
 from torchvision import transforms
 
 from alssl.data.cifar10 import CIFAR10LightningDataModule
-from alssl.model.dino import LightningDino
+from alssl.model.dino import LightningDinoClassifier
 
 # Configuration
-exp_name = "exp10"
+exp_name = "exp13"
 batch_size = 100
 num_epochs = 2000
-learning_rate = 1e-3
+learning_rate = 1e-5
 
 random_state = 0
 trains_size = 950
@@ -59,11 +59,12 @@ checkpoint_callback = ModelCheckpoint(
 
 trainer = Trainer(callbacks=[checkpoint_lr_monitor])
 
-model = LightningDino(
+model = LightningDinoClassifier(
     learning_rate=learning_rate,
-    optimizer_kwargs={"weight_decay": 1},
+    optimizer_kwargs={"weight_decay": 1e-1},
     scheduler_kwargs={"factor": 0.5},
 )
+
 trainer = L.Trainer(
     max_epochs=num_epochs,
     check_val_every_n_epoch=check_val_every_n_epoch,
