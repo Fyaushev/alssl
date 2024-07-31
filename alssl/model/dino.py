@@ -10,11 +10,12 @@ from ..metric import mean_iou
 
 
 class DinoClassifier(nn.Module):
-    def __init__(self):
+    def __init__(self, num_classes=10):
         super(DinoClassifier, self).__init__()
+        self.num_classes = num_classes
         self.transformer = AutoModel.from_pretrained("facebook/dinov2-base")
         self.classifier = nn.Sequential(
-            nn.Linear(768, 512), nn.ReLU(), nn.Linear(512, 10)
+            nn.Linear(768, 512), nn.ReLU(), nn.Linear(512, num_classes)
         )
 
     def forward(self, x):
@@ -41,6 +42,30 @@ class LinearClassifierToken(torch.nn.Module):
         return self.classifier(embeddings)
 
 
+class ConvToken(nn.Module):
+    def __init__(self, embedding_size=768, num_classes=21, token_w=32, token_h=32):
+        super(ConvToken, self).__init__()
+        self.width = token_w
+        self.height = token_h
+        self.embedding_size = embedding_size
+
+        self.segmentation_conv = nn.Sequential(
+            nn.Conv2d(embedding_size, 256, (3, 3), padding=(1, 1)),
+            nn.Upsample(scale_factor=2),
+            nn.LeakyReLU(),
+            nn.Conv2d(256, 128, (3, 3), padding=(1, 1)),
+            nn.Upsample(scale_factor=2),
+            nn.LeakyReLU(),
+            nn.Conv2d(128, num_classes, (3, 3), padding=(1, 1)),
+        )
+
+    def forward(self, x):
+        x = x.reshape(-1, self.height, self.width, self.embedding_size)
+        x = x.permute(0, 3, 1, 2)
+        x = self.segmentation_conv(x)
+        return x
+
+
 class DinoSemanticSegmentation(torch.nn.Module):
     def __init__(
         self,
@@ -53,9 +78,10 @@ class DinoSemanticSegmentation(torch.nn.Module):
     ):
         super(DinoSemanticSegmentation, self).__init__()
         self.transformer = AutoModel.from_pretrained(pretrained_model_name)
-        self.linear_classifiers = LinearClassifierToken(
-            embedding_dim, num_classes, token_w, token_h
-        )
+        self.linear_classifiers = ConvToken()
+        # self.linear_classifiers = LinearClassifierToken(
+        #     embedding_dim, num_classes, token_w, token_h
+        # )
 
     def forward(self, image):
         outputs = self.transformer(image)
@@ -77,7 +103,7 @@ class LightningDinoClassifier(L.LightningModule):
         optimizer_kwargs={},
     ):
         super().__init__()
-        self.model = DinoClassifier()
+        self.model = DinoClassifier(num_classes=num_classes)
         self.learning_rate = learning_rate
         self.validation_losses = []
         self.criterion = nn.CrossEntropyLoss()
@@ -92,9 +118,13 @@ class LightningDinoClassifier(L.LightningModule):
         optimizer = torch.optim.AdamW(
             self.model.parameters(), lr=self.learning_rate, **self.optimizer_kwargs
         )
-        scheduler = ReduceLROnPlateau(
-            optimizer, **self.scheduler_kwargs
-        )  # "monitor": "train_loss"
+
+        scheduler = MultiStepLR(optimizer, **self.scheduler_kwargs)
+
+        # scheduler = ReduceLROnPlateau(
+        #     optimizer, **self.scheduler_kwargs
+        # )
+        # "monitor": "train_loss"
         # scheduler = OneCycleLR(optimizer, **self.scheduler_kwargs)
 
         return [optimizer], [
@@ -148,7 +178,7 @@ class LightningDinoSegmentation(L.LightningModule):
         optimizer_kwargs={},
     ):
         super().__init__()
-        self.model = DinoSemanticSegmentation(num_classes=num_classes)
+        self.model = DinoSemanticSegmentation()
         self.learning_rate = learning_rate
         self.validation_losses = []
         self.criterion = nn.CrossEntropyLoss()
