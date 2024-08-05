@@ -18,7 +18,7 @@ from ..strategy.base import BaseStrategy
 
 class ALTrainer:
     """
-    Abstract class for Active Learning policy.
+    Class for running an Active Learning training loop.
     """
 
     def __init__(
@@ -40,9 +40,28 @@ class ALTrainer:
         num_epochs=101,
         check_val_every_n_epoch=1,
     ):
+        """
+        Args:
+            exp_root_path: Path to the root directory for experiment logs.
+            exp_name: Name of the experiment.
+            al_strategy: The active learning strategy to use.
+            al_datamodule: The data module for active learning.
+            al_model: The model to be trained.
+            budget_size: The number of new samples to select in each iteration.
+            initial_train_size: Number of initial training samples.
+            initial_val_size: Number of initial validation samples.
+            n_iter: Number of active learning iterations.
+            random_seed: Random seed for reproducibility.
+            finetune: Whether to finetune the model or reinitialize in each iteration.
+            project_name: Project name for logging (e.g., in Wandb).
+            checkpoint_every_n_epochs: Frequency of saving model checkpoints.
+            num_epochs: Number of epochs to train in each iteration.
+            check_val_every_n_epoch: Frequency of validation checks.
+        """
         self.exp_root_path = Path(exp_root_path)
         self.exp_name = exp_name
         self.exp_path = self.exp_root_path / self.exp_name
+        # Create experiment directory
         self.exp_path.mkdir(parents=True, exist_ok=True)
         self.project_name = project_name
 
@@ -62,9 +81,15 @@ class ALTrainer:
         self.num_epochs = num_epochs
 
     def run(self):
+        """
+        Runs the active learning training loop.
+        """
+
+        # Set random seed for reproducibility
         L.seed_everything(seed=self.random_seed, workers=True)
         random.seed(self.random_seed)
 
+        # Prepare training and validation sets
         # TODO: stratify?
         train_ids, val_ids = train_test_split(
             np.arange(len(self.al_datamodule.full_train_dataset)),
@@ -73,8 +98,8 @@ class ALTrainer:
             random_state=self.random_seed,
         )
 
-        self.al_datamodule.set_train_ids(train_ids)
-        self.al_datamodule.set_val_ids(val_ids)
+        self.al_datamodule.set_train_ids(list(train_ids))
+        self.al_datamodule.set_val_ids(list(val_ids))
         module = self.al_model.get_lightning_module()
 
         for i in tqdm(range(self.n_iter), desc="AL iteration"):
@@ -92,7 +117,7 @@ class ALTrainer:
                 name=cur_exp_name,
             )
 
-            # logs
+            # Setup Wandb logger and callbacks
             wandb_logger = WandbLogger(name=cur_exp_name, project=self.project_name)
             checkpoint_lr_monitor = LearningRateMonitor(logging_interval="epoch")
             checkpoint_callback = ModelCheckpoint(
@@ -120,6 +145,7 @@ class ALTrainer:
             self.al_datamodule.update_train_ids(active_learning_id)
             wandb_run.finish()
 
+            # Log summary metrics to Wandb
             if i == 0:
                 wandb_run = wandb.init(
                     dir=self.exp_path,
@@ -138,5 +164,5 @@ class ALTrainer:
                     resume="must",
                 )
 
-            wandb_run.log(test_metrics, step=i)
+            wandb_run.log(test_metrics[0], step=i)  # FIXME
             wandb_run.finish()
