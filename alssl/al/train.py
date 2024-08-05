@@ -79,15 +79,18 @@ class ALTrainer:
 
         for i in tqdm(range(self.n_iter), desc="AL iteration"):
             cur_exp_name = f"{self.exp_name}_iter_{i}"
-            wandb_run = wandb.init(
-                project=self.project_name, group=self.exp_name, name=cur_exp_name
-            )
-
             (self.exp_path / cur_exp_name).mkdir(parents=True)
             os.chdir(self.exp_path / cur_exp_name)  # FIXME
 
             save(self.al_datamodule.train_ids, "train_ids.json")
             save(self.al_datamodule.val_ids, "val_ids.json")
+
+            wandb_run = wandb.init(
+                dir=self.exp_path / cur_exp_name,
+                project=self.project_name,
+                group=self.exp_name,
+                name=cur_exp_name,
+            )
 
             # logs
             wandb_logger = WandbLogger(name=cur_exp_name, project=self.project_name)
@@ -119,6 +122,7 @@ class ALTrainer:
 
             if i == 0:
                 wandb_run = wandb.init(
+                    dir=self.exp_path,
                     project=self.project_name,
                     group=self.exp_name,
                     name=f"{self.exp_name}_summary",
@@ -126,6 +130,7 @@ class ALTrainer:
                 run_id = wandb_run.id
             else:
                 wandb_run = wandb.init(
+                    dir=self.exp_path,
                     project=self.project_name,
                     group=self.exp_name,
                     name=f"{self.exp_name}_summary",
