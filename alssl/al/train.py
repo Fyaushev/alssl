@@ -4,6 +4,7 @@ from pathlib import Path
 
 import lightning as L
 import numpy as np
+import torch
 import wandb
 from dpipe.io import save
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
@@ -88,6 +89,7 @@ class ALTrainer:
         # Set random seed for reproducibility
         L.seed_everything(seed=self.random_seed, workers=True)
         random.seed(self.random_seed)
+        torch.use_deterministic_algorithms(True, warn_only=True)
 
         # Prepare training and validation sets
         # TODO: stratify?
