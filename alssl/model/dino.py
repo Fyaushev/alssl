@@ -1,7 +1,7 @@
 import lightning as L
 import torch
 from torch import nn
-from torch.optim.lr_scheduler import OneCycleLR, ReduceLROnPlateau, MultiStepLR
+from torch.optim.lr_scheduler import MultiStepLR, OneCycleLR, ReduceLROnPlateau
 from torchmetrics.functional import accuracy
 from torchmetrics.segmentation import MeanIoU
 from transformers import AutoModel
@@ -21,7 +21,7 @@ class DinoClassifier(nn.Module):
     def forward(self, x):
         embeddings = self.transformer(x).pooler_output
         logits = self.classifier(embeddings)
-        return logits
+        return logits, embeddings
 
 
 class LinearClassifierToken(torch.nn.Module):
@@ -39,7 +39,7 @@ class LinearClassifierToken(torch.nn.Module):
     def forward(self, embeddings):
         embeddings = embeddings.reshape(-1, self.height, self.width, self.in_channels)
         embeddings = embeddings.permute(0, 3, 1, 2)
-        return self.classifier(embeddings)
+        return self.classifier(embeddings), embeddings
 
 
 class ConvToken(nn.Module):
@@ -91,7 +91,7 @@ class DinoSemanticSegmentation(torch.nn.Module):
             logits, size=image.shape[2:], mode="bilinear", align_corners=False
         )
 
-        return logits
+        return logits, patch_embeddings
 
 
 class LightningDinoClassifier(L.LightningModule):
@@ -133,7 +133,7 @@ class LightningDinoClassifier(L.LightningModule):
 
     def training_step(self, batch, batch_idx):
         images, labels = batch
-        logits = self(images)
+        logits, embeddings = self(images)
 
         loss = self.criterion(logits, labels)
         acc = self._calculate_accuracy(logits, labels)
@@ -155,7 +155,7 @@ class LightningDinoClassifier(L.LightningModule):
 
     def test_step(self, batch, batch_idx):
         images, labels = batch
-        logits = self(images)
+        logits, embeddings = self(images)
 
         acc = self._calculate_accuracy(logits, labels)
         self.log("test_acc", acc, on_epoch=True, on_step=False)
@@ -202,7 +202,7 @@ class LightningDinoSegmentation(L.LightningModule):
 
     def training_step(self, batch, batch_idx):
         images, masks = batch
-        logits = self(images)
+        logits, embeddings = self(images)
 
         # raise ValueError(f"masks.shape: {masks.shape}; logits.shape: {logits.shape}")
         # print(masks.shape)
@@ -229,7 +229,7 @@ class LightningDinoSegmentation(L.LightningModule):
 
     def test_step(self, batch, batch_idx):
         images, masks = batch
-        logits = self(images)
+        logits, embeddings = self(images)
 
         miou = self._calculate_miou(logits, masks)
         self.log("test_miou", miou, on_epoch=True, on_step=False)

@@ -4,12 +4,14 @@ from pathlib import Path
 
 import lightning as L
 import numpy as np
-import wandb
+import torch
 from dpipe.io import save
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
 from lightning.pytorch.loggers import WandbLogger
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
+
+import wandb
 
 from ..data.base import ALDataModule
 from ..model.base import BaseALModel
@@ -39,6 +41,7 @@ class ALTrainer:
         checkpoint_every_n_epochs=50,
         num_epochs=101,
         check_val_every_n_epoch=1,
+        entitiy='dnogina'
     ):
         """
         Args:
@@ -61,6 +64,7 @@ class ALTrainer:
         self.exp_root_path = Path(exp_root_path)
         self.exp_name = exp_name
         self.exp_path = self.exp_root_path / self.exp_name
+        self.entitiy = entitiy
         # Create experiment directory
         self.exp_path.mkdir(parents=True, exist_ok=True)
         self.project_name = project_name
@@ -86,8 +90,11 @@ class ALTrainer:
         """
 
         # Set random seed for reproducibility
-        L.seed_everything(seed=self.random_seed, workers=True)
+        self.random_seed = L.seed_everything(seed=self.random_seed, workers=True)
         random.seed(self.random_seed)
+        torch.use_deterministic_algorithms(True, warn_only=True)
+        torch.backends.cudnn.benchmark = False
+        torch.backends.cudnn.deterministic=True
 
         # Prepare training and validation sets
         # TODO: stratify?
@@ -115,6 +122,7 @@ class ALTrainer:
                 project=self.project_name,
                 group=self.exp_name,
                 name=cur_exp_name,
+                entity=self.entitiy,
             )
 
             # Setup Wandb logger and callbacks
@@ -152,6 +160,7 @@ class ALTrainer:
                     project=self.project_name,
                     group=self.exp_name,
                     name=f"{self.exp_name}_summary",
+                    entity=self.entitiy,
                 )
                 run_id = wandb_run.id
             else:
@@ -162,6 +171,7 @@ class ALTrainer:
                     name=f"{self.exp_name}_summary",
                     id=run_id,
                     resume="must",
+                    entity=self.entitiy,
                 )
 
             wandb_run.log(test_metrics[0], step=i)  # FIXME

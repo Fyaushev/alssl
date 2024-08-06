@@ -1,7 +1,6 @@
 import lightning as L
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, Subset
 from torch.utils.data.dataloader import DataLoader
-from torch.utils.data import Subset
 
 
 class ALDataModule(L.LightningDataModule):
@@ -70,6 +69,9 @@ class ALDataModule(L.LightningDataModule):
     def set_test_ids(self, ids):
         self.test_ids = ids
 
+    def get_unlabeled_ids(self):
+        return list(set(self.all_ids) - set(self.train_ids + self.val_ids))
+
     def get_train_dataset(self) -> Dataset:
         """
         Get the test dataset subset the train dataset.
@@ -93,6 +95,12 @@ class ALDataModule(L.LightningDataModule):
             if self.test_ids
             else self.full_test_dataset
         )
+    
+    def get_unlabeled_dataset(self) -> Dataset:
+        """
+        Get the unlabeled dataset subset or the train dataset.
+        """
+        return Subset(self.full_train_dataset, self.get_unlabeled_ids())
 
     def update_train_ids(self, active_learning_ids):
         """
@@ -129,6 +137,14 @@ class ALDataModule(L.LightningDataModule):
     def test_dataloader(self):
         return DataLoader(
             self.get_test_dataset(),
+            batch_size=self.batch_size,
+            shuffle=False,
+            num_workers=self.num_workers,
+        )
+    
+    def unlabeled_dataloader(self):
+        return DataLoader(
+            self.get_unlabeled_dataset(),
             batch_size=self.batch_size,
             shuffle=False,
             num_workers=self.num_workers,
