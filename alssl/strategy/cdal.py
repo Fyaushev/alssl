@@ -28,4 +28,4 @@ class CDALStrategy(BaseStrategy):
         chosen_idxs = furthest_first(proba_unlabeled, proba_train, budget)
         unlabeled_ids = dataset.get_unlabeled_ids()
 
-        return unlabeled_ids[chosen_idxs]
+        return np.array(unlabeled_ids)[chosen_idxs.astype(int)]

@@ -14,14 +14,13 @@ class EntropyStrategy(BaseStrategy):
         unlabeled_dataset = dataset.unlabeled_dataloader()
         
         scores = predict(
-            model.get_lightning_module(), 
+            model, 
             unlabeled_dataset, 
             scoring="individual", 
             scoring_function=self.scoring_function)
 
         unlabeled_ids = dataset.get_unlabeled_ids()
-
-        return np.array(unlabeled_ids[np.argsort(scores)])[:budget].tolist()
+        return np.array(unlabeled_ids)[np.argsort(scores)][:budget].tolist()
 
     def scoring_function(self, gt, pred, embeddings):
         """

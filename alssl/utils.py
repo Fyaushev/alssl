@@ -39,8 +39,8 @@ def predict(
                 scores = np_append(score, scores)
             else:
                 ys = np_append(move_to_np(y), ys)
-                y_preds = np_append(y_pred, y_preds)
-                all_embeddings = np_append(embeddings, all_embeddings)
+                y_preds = np_append(y_pred, y_preds) if y_preds.size else y_pred
+                all_embeddings = np_append(embeddings, all_embeddings) if all_embeddings.size else embeddings
     
     if scoring == "common":
         scores = scoring_function(ys, y_preds, all_embeddings)
