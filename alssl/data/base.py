@@ -112,7 +112,7 @@ class ALDataModule(L.LightningDataModule):
         assert set(self.train_ids + self.val_ids).isdisjoint(active_learning_ids)
         assert set(active_learning_ids) <= set(self.all_ids)
 
-        self.train_ids += active_learning_ids
+        self.train_ids += list(active_learning_ids)
 
     def train_dataloader(self):
         return DataLoader(
