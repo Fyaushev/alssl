@@ -144,7 +144,7 @@ class LightningDinoClassifier(L.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         images, labels = batch
-        logits = self(images)
+        logits, embeddings = self(images)
 
         loss = self.criterion(logits, labels)
         acc = self._calculate_accuracy(logits, labels)
@@ -217,7 +217,7 @@ class LightningDinoSegmentation(L.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         images, masks = batch
-        logits = self(images)
+        logits, embeddings = self(images)
 
         loss = self.criterion(logits, masks)
         miou = self._calculate_miou(logits, masks)
