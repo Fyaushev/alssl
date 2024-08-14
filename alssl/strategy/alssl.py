@@ -10,8 +10,8 @@ from tqdm import tqdm
 
 from ..data.base import ALDataModule
 from ..model.base import BaseALModel
-from ..utils import predict
 from .base import BaseStrategy
+from .utils import predict
 
 
 def get_current_iteration():

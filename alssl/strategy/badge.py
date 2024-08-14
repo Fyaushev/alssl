@@ -9,8 +9,8 @@ from torch import nn
 from tqdm import tqdm
 
 from ..data.base import ALDataModule
-from ..utils import predict
 from .base import BaseStrategy
+from .utils import predict
 
 
 # kmeans ++ initialization

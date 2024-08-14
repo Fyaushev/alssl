@@ -4,8 +4,8 @@ from scipy.special import softmax
 from torch import nn
 
 from ..data.base import ALDataModule
-from ..utils import predict
 from .base import BaseStrategy
+from .utils import predict
 
 
 class EntropyStrategy(BaseStrategy):

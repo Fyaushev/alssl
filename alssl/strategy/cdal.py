@@ -5,9 +5,9 @@ from sklearn.metrics import pairwise_distances
 from torch import nn
 
 from ..data.base import ALDataModule
-from ..utils import predict
 from .base import BaseStrategy
 from .coreset import furthest_first
+from .utils import predict
 
 
 class CDALStrategy(BaseStrategy):
