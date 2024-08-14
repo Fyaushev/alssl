@@ -31,18 +31,18 @@ def furthest_first(X, X_set, n):
 
 
 class CoresetStrategy(BaseStrategy):
-    def select_ids(self, model: nn.Module, dataset: ALDataModule, budget: int):
+    def select_ids(self, model: nn.Module, dataset: ALDataModule, budget: int, _):
         _, _, embeddings_unlabeled = predict(
             model,
             dataset.unlabeled_dataloader(), 
-            scoring="none")
+            scoring="none", desc='unlabeled')
         
         _, _, embeddings_train = predict(
             model,
             dataset.train_dataloader(), 
-            scoring="none")
+            scoring="none", desc='train')
 
         chosen_idxs = furthest_first(embeddings_unlabeled, embeddings_train, budget)
         unlabeled_ids = dataset.get_unlabeled_ids()
 
-        return np.array(unlabeled_ids)[chosen_idxs.astype(int)]
+        return np.array(unlabeled_ids)[chosen_idxs.astype(int)].tolist()

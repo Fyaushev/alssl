@@ -17,7 +17,9 @@ def predict(
         dataloader, 
         scoring: Literal["common", "individual", "none"]="none", 
         scoring_function:Optional[Callable]=None, 
-        device='cuda'):
+        device='cuda',
+        desc: str = ''
+    ):
     '''
     Make prediction from a pytorch model (logits)
     '''
@@ -29,7 +31,7 @@ def predict(
         ys, y_preds, all_embeddings = np.array([]), np.array([]), np.array([])
     
     with torch.no_grad():
-        for x, y in tqdm(dataloader, total=len(dataloader)):
+        for x, y in tqdm(dataloader, total=len(dataloader), desc=f'strategy prediction {desc}:'):
             x, y = x.to(device), y.to(device)
             
             y_pred, embeddings = map(move_to_np, model(x))

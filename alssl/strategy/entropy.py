@@ -9,7 +9,7 @@ from .base import BaseStrategy
 
 
 class EntropyStrategy(BaseStrategy):
-    def select_ids(self, model: nn.Module, dataset: ALDataModule, budget: int):
+    def select_ids(self, model: nn.Module, dataset: ALDataModule, budget: int, _):
         
         unlabeled_dataset = dataset.unlabeled_dataloader()
         

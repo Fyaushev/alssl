@@ -148,7 +148,7 @@ class ALTrainer:
             test_metrics = trainer.test(module, datamodule=self.al_datamodule)
 
             active_learning_id = self.al_strategy.select_ids(
-                module, self.al_datamodule, self.budget_size
+                module, self.al_datamodule, self.budget_size, self.al_model
             )
             self.al_datamodule.update_train_ids(active_learning_id)
             wandb_run.finish()
