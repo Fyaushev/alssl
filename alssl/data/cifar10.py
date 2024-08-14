@@ -3,12 +3,12 @@ from typing import Iterable
 
 import lightning as L
 import numpy as np
+from dpipe.io import save
 from sklearn.model_selection import train_test_split
 from torch.utils.data import Subset, random_split
 from torch.utils.data.dataloader import DataLoader
 from torchvision import transforms
 from torchvision.datasets import ImageFolder
-from dpipe.io import save
 
 DATA_PATH = Path("/shared/projects/active_learning/data/cifar10")
 
@@ -20,6 +20,8 @@ dino_transform = transforms.Compose(
     ]
 )
 
+def get_num_classes():
+    return 10
 
 def get_dataset(subset="train", transform=dino_transform):
     assert subset in ["train", "test"]

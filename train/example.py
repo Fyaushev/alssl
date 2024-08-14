@@ -1,76 +1,72 @@
-from pathlib import Path
+import argparse
 
-import torchvision
 from torchvision import transforms
 
 from alssl.al.train import ALTrainer
 from alssl.data.base import ALDataModule
+from alssl.data.cifar100 import get_dataset, get_num_classes
 from alssl.model.base import BaseALModel
 from alssl.model.dino import LightningDinoClassifier
-from alssl.strategy.random import RandomStrategy
+from alssl.strategy.alssl import ALSSLStrategy
+from alssl.utils import parse_run_config
 
-ALTrainer, RandomStrategy, BaseALModel, ALDataModule
+# from alssl.strategy.random import RandomStrategy
+
+ALTrainer, ALSSLStrategy, BaseALModel, ALDataModule
 
 
-DATA_PATH = Path("/shared/projects/active_learning/data/cifar100")
+parser = argparse.ArgumentParser()
+parser.add_argument('--config', help='config path', required=True)
+args = parser.parse_args()
+
+config = parse_run_config(args.config)
+
 
 # DATA
 # Define the transformations for training and test datasets
 train_transform = transforms.Compose(
     [
         transforms.ToTensor(),
-        transforms.RandomCrop(32, padding=4),
+        transforms.RandomCrop(config.dataset_transforms["crop_size"], padding=config.dataset_transforms["padding"]),
         transforms.RandomHorizontalFlip(),
-        transforms.Resize((224, 224), antialias=True),
+        transforms.Resize(config.dataset_transforms["image_size"], antialias=config.dataset_transforms["antialias"]),
         transforms.RandomRotation(10),
-        transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+        transforms.Normalize(mean=config.dataset_transforms["normalize_mean"], std=config.dataset_transforms["normalize_std"]),
     ]
 )
 
 test_transform = transforms.Compose(
     [
         transforms.ToTensor(),
-        transforms.Resize((224, 224), antialias=True),
-        transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+        transforms.Resize(config.dataset_transforms["image_size"], antialias=config.dataset_transforms["antialias"]),
+        transforms.Normalize(mean=config.dataset_transforms["normalize_mean"], std=config.dataset_transforms["normalize_std"]),
     ]
 )
 
 # Load the CIFAR-100 datasets with the specified transformations
-train_dataset = torchvision.datasets.CIFAR100(
-    root=DATA_PATH, train=True, download=False, transform=train_transform
-)
-
-test_dataset = torchvision.datasets.CIFAR100(
-    root=DATA_PATH, train=False, download=False, transform=test_transform
-)
+train_dataset = get_dataset(subset="train", transform=train_transform)
+test_dataset = get_dataset(subset="test", transform=train_transform)
 
 # Initialize the Active Learning data module with the datasets and batch size
-batch_size = 100
 data_module = ALDataModule(
     full_train_dataset=train_dataset,
     full_test_dataset=test_dataset,
-    batch_size=batch_size,
+    batch_size=config.training["batch_size"],
 )
 
 # MODEL
 # Define some model parameters
-num_epochs = 51
-learning_rate = 1e-5
 
-num_classes = 100
-random_state = 0
-num_workers = 16
-checkpoint_every_n_epochs = 50
-check_val_every_n_epoch = 1
+num_classes = get_num_classes()
 
 
 class Model(BaseALModel):
     def get_lightning_module(self):
         module = LightningDinoClassifier(
-            learning_rate=learning_rate,
+            learning_rate=config.training["learning_rate"],
             num_classes=num_classes,
-            optimizer_kwargs={"weight_decay": 1e-3},
-            scheduler_kwargs={"gamma": 0.1, "milestones": [20]},
+            optimizer_kwargs=config.training["optimizer_kwargs"],
+            scheduler_kwargs=config.training["scheduler_kwargs"],
         )
         return module
 
@@ -80,21 +76,23 @@ model = Model()
 
 # TRAIN
 # Initialize the Active Learning trainer
-budget_size = 5000
 trainer = ALTrainer(
-    exp_root_path="/shared/experiments/active_learning/alssl/test",
-    exp_name="example",
-    al_strategy=RandomStrategy(),
+    exp_root_path=config.experiment["exp_root_path"],
+    exp_name=config.experiment["exp_name"],
+    
+    al_strategy=ALSSLStrategy(num_neighbours=config.strategy["num_neighbours"]),
     al_datamodule=data_module,
     al_model=model,
-    budget_size=budget_size,
-    initial_train_size=5000,
-    initial_val_size=200,
-    n_iter=10,
-    random_seed=0,
-    num_epochs=51,
-    checkpoint_every_n_epochs=50,
+    
+    budget_size=config.strategy["budget_size"],
+    initial_train_size=config.strategy["initial_train_size"],
+    initial_val_size=config.strategy["initial_val_size"],
+    n_iter=config.strategy["n_iter"],
+    
+    random_seed=config.training["random_seed"],
+    num_epochs=config.training["num_epochs"],
+    checkpoint_every_n_epochs=config.training["checkpoint_every_n_epochs"],
 )
 
-
-trainer.run()
+if __name__ == "__main__":
+    trainer.run()

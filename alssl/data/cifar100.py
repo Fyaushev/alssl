@@ -20,6 +20,8 @@ dino_transform = transforms.Compose(
     ]
 )
 
+def get_num_classes():
+    return 100
 
 def get_dataset(subset="train", transform=dino_transform):
     assert subset in ["train", "test"]
