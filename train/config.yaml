@@ -1,18 +1,18 @@
 experiment:
-  exp_root_path: /shared/experiments/active_learning/alssl/entropy
-  exp_name: example
+  exp_root_path: /gpfs/data/gpfs0/m.pisov/active_learning/alssl/cifar100/5k
+  exp_name: NeighboursStrategy/seed0
 
 strategy:
-  strategy_name: ALSSLStrategy
+  strategy_name: NeighboursStrategy
   num_neighbours: 500
-  budget_size: 50
+  budget_size: 5000
   initial_train_size: 5000
   initial_val_size: 200
   n_iter: 10
 
 training:
-  batch_size: 50 # 100
-  num_epochs: 1
+  batch_size: 100
+  num_epochs: 50
   learning_rate: 0.00001
   random_seed: 0
   num_workers: 16

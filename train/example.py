@@ -7,12 +7,14 @@ from alssl.data.base import ALDataModule
 from alssl.data.cifar100 import get_dataset, get_num_classes
 from alssl.model.base import BaseALModel
 from alssl.model.dino import LightningDinoClassifier
-from alssl.strategy.alssl import ALSSLStrategy
+from alssl.strategy import *
 from alssl.utils import parse_run_config
 
 # from alssl.strategy.random import RandomStrategy
 
-ALTrainer, ALSSLStrategy, BaseALModel, ALDataModule
+ALTrainer, NeighboursStrategy, BaseALModel, ALDataModule
+
+al_strategy_class = NeighboursStrategy
 
 
 parser = argparse.ArgumentParser()
@@ -80,7 +82,8 @@ trainer = ALTrainer(
     exp_root_path=config.experiment["exp_root_path"],
     exp_name=config.experiment["exp_name"],
     
-    al_strategy=ALSSLStrategy(num_neighbours=config.strategy["num_neighbours"]),
+    al_strategy=al_strategy_class(num_neighbours=config.strategy["num_neighbours"]),
+    # al_strategy=al_strategy_class(num_neighbours=num_classes),
     al_datamodule=data_module,
     al_model=model,
     
