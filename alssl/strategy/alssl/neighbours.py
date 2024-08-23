@@ -27,10 +27,10 @@ class NeighboursStrategy(BaseStrategy):
             if get_current_iteration():
                 previous_model.load_state_dict(get_previous_interation_state_dict())
 
-            _, neighbours_original_inds = get_neighbours(previous_model, dataset, desc="original")
+            _, neighbours_original_inds = get_neighbours(previous_model, dataset, desc="original", num_neighbours=self.num_neighbours)
 
         # generate neighbours for current iteration and save for later
-        _, neighbours_finetuned_inds = get_neighbours(model, dataset, desc="finetuned")
+        _, neighbours_finetuned_inds = get_neighbours(model, dataset, desc="finetuned", num_neighbours=self.num_neighbours)
         np.save('neighbours_inds.npy', neighbours_finetuned_inds)
 
         scores = []
