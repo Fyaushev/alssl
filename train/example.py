@@ -7,7 +7,7 @@ from alssl.data.base import ALDataModule
 from alssl.data.cifar100 import get_dataset, get_num_classes
 from alssl.model.base import BaseALModel
 from alssl.model.dino import LightningDinoClassifier
-from alssl.strategy import *
+from alssl.strategy.alssl.neighbours import NeighboursStrategy
 from alssl.utils import parse_run_config
 
 # from alssl.strategy.random import RandomStrategy

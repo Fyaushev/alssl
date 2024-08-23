@@ -10,7 +10,7 @@ from torch.utils.data import Subset
 from torch.utils.data.dataloader import DataLoader
 from torchvision import transforms
 
-DATA_PATH = Path("/shared/projects/active_learning/data/cifar100")
+DATA_PATH = Path("/home/penzard/dn/data/cifar100")
 
 dino_transform = transforms.Compose(
     [
@@ -26,7 +26,7 @@ def get_num_classes():
 def get_dataset(subset="train", transform=dino_transform):
     assert subset in ["train", "test"]
     return torchvision.datasets.CIFAR100(
-        root=DATA_PATH, train=subset == "train", download=False, transform=transform
+        root=DATA_PATH, train=subset == "train", download=True, transform=transform
     )
 
 
