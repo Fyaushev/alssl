@@ -10,7 +10,7 @@ from torch.utils.data import Subset
 from torch.utils.data.dataloader import DataLoader
 from torchvision import transforms
 
-DATA_PATH = Path("/home/penzard/dn/data/cifar100")
+DATA_PATH = Path("/shared/projects/active_learning/cifar100")
 
 dino_transform = transforms.Compose(
     [
