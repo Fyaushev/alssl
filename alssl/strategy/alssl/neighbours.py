@@ -19,15 +19,15 @@ class NeighboursStrategy(BaseStrategy):
     def select_ids(self, model: nn.Module, dataset: ALDataModule, budget: int, almodel: BaseALModel):
 
         # get neighbours for previous iteration and save for later
+        # if get_current_iteration():
+        #     neighbours_original_inds = np.load(get_previous_iteration_dir() / 'neighbours_inds.npy')    
+        # else:
+        previous_model = almodel.get_lightning_module()
+        # load weights from previous iteration if available
         if get_current_iteration():
-            neighbours_original_inds = np.load(get_previous_iteration_dir() / 'neighbours_inds.npy')    
-        else:
-            previous_model = almodel.get_lightning_module()
-            # load weights from previous iteration if available
-            if get_current_iteration():
-                previous_model.load_state_dict(get_previous_interation_state_dict())
+            previous_model.load_state_dict(get_previous_interation_state_dict())
 
-            _, neighbours_original_inds = get_neighbours(previous_model, dataset, desc="original", num_neighbours=self.num_neighbours)
+        _, neighbours_original_inds = get_neighbours(previous_model, dataset, desc="original", num_neighbours=self.num_neighbours)
 
         # generate neighbours for current iteration and save for later
         _, neighbours_finetuned_inds = get_neighbours(model, dataset, desc="finetuned", num_neighbours=self.num_neighbours)
