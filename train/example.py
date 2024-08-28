@@ -1,4 +1,6 @@
 import argparse
+from functools import partial
+from pathlib import Path
 
 from torchvision import transforms
 
@@ -7,14 +9,10 @@ from alssl.data.base import ALDataModule
 from alssl.data.cifar100 import get_dataset, get_num_classes
 from alssl.model.base import BaseALModel
 from alssl.model.dino import LightningDinoClassifier
-from alssl.strategy.alssl.neighbours import NeighboursStrategy
+from alssl.strategy import strategies
 from alssl.utils import parse_run_config
 
-# from alssl.strategy.random import RandomStrategy
-
-ALTrainer, NeighboursStrategy, BaseALModel, ALDataModule
-
-al_strategy_class = NeighboursStrategy
+ALTrainer, BaseALModel, ALDataModule
 
 
 parser = argparse.ArgumentParser()
@@ -79,11 +77,9 @@ model = Model()
 # TRAIN
 # Initialize the Active Learning trainer
 trainer = ALTrainer(
-    exp_root_path=config.experiment["exp_root_path"],
-    exp_name=config.experiment["exp_name"],
-    
-    al_strategy=al_strategy_class(num_neighbours=config.strategy["num_neighbours"]),
-    # al_strategy=al_strategy_class(num_neighbours=num_classes),
+    exp_root_path=Path(config.experiment["exp_root_path"]) / str(config.strategy["budget_size"]) / str(config.strategy["initial_train_size"]) / str(config.training["random_seed"]),
+    exp_name=config.strategy["strategy_name"],
+    al_strategy=partial(strategies[config.strategy["strategy_name"]], **config.strategy["strategy_params"])(),
     al_datamodule=data_module,
     al_model=model,
     

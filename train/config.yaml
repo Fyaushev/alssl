@@ -1,10 +1,10 @@
 experiment:
-  exp_root_path: /gpfs/data/gpfs0/m.pisov/active_learning/alssl/cifar100/5k
-  exp_name: NeighboursStrategy/seed0
+  exp_root_path:  /shared/experiments/active_learning/alssl/dn/cifar100
 
 strategy:
-  strategy_name: NeighboursStrategy
-  num_neighbours: 500
+  strategy_name: CoresetStrategy
+  strategy_params:
+    num_neighbours: 500
   budget_size: 5000
   initial_train_size: 5000
   initial_val_size: 200
@@ -16,7 +16,7 @@ training:
   learning_rate: 0.00001
   random_seed: 0
   num_workers: 16
-  checkpoint_every_n_epochs: 1
+  checkpoint_every_n_epochs: 50
   check_val_every_n_epoch: 1
   optimizer_kwargs:
     weight_decay: 0.001
