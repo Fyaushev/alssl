@@ -62,13 +62,14 @@ num_classes = get_num_classes()
 
 class Model(BaseALModel):
     def get_lightning_module(self):
-        module = LightningDinoClassifier(
-            learning_rate=config.training["learning_rate"],
-            num_classes=num_classes,
-            optimizer_kwargs=config.training["optimizer_kwargs"],
-            scheduler_kwargs=config.training["scheduler_kwargs"],
-        )
-        return module
+        return LightningDinoClassifier
+    def get_hyperparameters(self):
+        return {
+            'learning_rate':config.training["learning_rate"],
+            'num_classes':num_classes,
+            'optimizer_kwargs':config.training["optimizer_kwargs"],
+            'scheduler_kwargs':config.training["scheduler_kwargs"],
+        }
 
 
 model = Model()
@@ -77,7 +78,7 @@ model = Model()
 # TRAIN
 # Initialize the Active Learning trainer
 trainer = ALTrainer(
-    exp_root_path=Path(config.experiment["exp_root_path"]) / str(config.strategy["budget_size"]) / str(config.strategy["initial_train_size"]) / str(config.training["random_seed"]),
+    exp_root_path=Path(config.experiment["exp_root_path"]) / str(config.strategy["initial_train_size"]) / str(config.training["random_seed"]) / str(config.strategy["budget_size"]),
     exp_name=config.strategy["strategy_name"],
     al_strategy=partial(strategies[config.strategy["strategy_name"]], **config.strategy["strategy_params"])(),
     al_datamodule=data_module,
