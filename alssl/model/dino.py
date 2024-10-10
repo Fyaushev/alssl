@@ -101,9 +101,16 @@ class LightningDinoClassifier(L.LightningModule):
         num_classes=10,
         scheduler_kwargs={},
         optimizer_kwargs={},
+        include_param_loss: bool = True,
+        param_loss_beta: float = 0.01,
     ):
         super().__init__()
         self.model = DinoClassifier(num_classes=num_classes)
+        self.include_param_loss = include_param_loss
+        self.param_loss_beta = param_loss_beta
+        self.source_weight = {}
+        for name, param in self.model.named_parameters():
+            self.source_weight[name] = param.detach()
         self.learning_rate = learning_rate
         self.validation_losses = []
         self.criterion = nn.CrossEntropyLoss()
@@ -136,6 +143,16 @@ class LightningDinoClassifier(L.LightningModule):
         logits, embeddings = self(images)
 
         loss = self.criterion(logits, labels)
+        self.log("train_loss_criterion", loss, prog_bar=True, on_epoch=True, on_step=False)
+        
+        # code from https://github.com/holyseven/TransferLearningClassification/blob/master/model/network_base.py
+        if self.include_param_loss:
+            param_loss = 0.0
+            for name, param in self.model.named_parameters():
+                param_loss += 0.5 * torch.norm(param - self.source_weight[name].to(param)) ** 2
+            loss += param_loss * self.param_loss_beta
+            self.log("param_loss", param_loss, prog_bar=True, on_epoch=True, on_step=False)
+
         acc = self._calculate_accuracy(logits, labels)
 
         self.log("train_loss", loss, prog_bar=True, on_epoch=True, on_step=False)
