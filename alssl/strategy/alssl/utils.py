@@ -5,26 +5,35 @@ import torch
 from sklearn.neighbors import NearestNeighbors
 from torch import nn
 
+from ...al.utils import last_checkpoint
 from ...data.base import ALDataModule
 from ..utils import predict
 
 
 def get_current_iteration():
-    curr_dir = Path(os.getcwd())
-    return int(curr_dir.name.split('_')[-1])
+    curr_dir = Path(os.getcwd()).name #.split('_')
+    if curr_dir == 'zero_iteration':
+        return 0
+    else:
+        return int(curr_dir.split('_')[-1])
 
 def get_previous_iteration_dir():
     curr_dir = Path(os.getcwd())
-    experiment_name = curr_dir.name.split('_')[0]
-    current_iteration = int(curr_dir.name.split('_')[-1])
-    previous_iteration_dir = curr_dir.parents[0] / f'{experiment_name}_iter_{current_iteration-1}'
-    return previous_iteration_dir
+    curr_iter = get_current_iteration()
+    if curr_iter == 0:
+        return
+    elif curr_iter == 1:
+        return curr_dir.parent.parent / 'zero_iteration'
+    else:
+        return curr_dir.parents[0] / f'iter_{curr_iter - 1}'
+    # experiment_name = curr_dir.name.split('_')[0]
+    # current_iteration = int(curr_dir.name.split('_')[-1])
+    # previous_iteration_dir = curr_dir.parents[0] / f'{experiment_name}_iter_{current_iteration-1}'
+    # return previous_iteration_dir
 
 def get_previous_interation_state_dict():
     previous_iteration_dir = get_previous_iteration_dir()
-    checkpoints = previous_iteration_dir.glob('*/*/checkpoints/*.ckpt')
-    checkpoint_path = max(checkpoints, key=lambda t: os.stat(t).st_mtime)
-    return torch.load(checkpoint_path)["state_dict"]
+    return last_checkpoint(previous_iteration_dir)
 
 
 def get_neighbours(model: nn.Module, dataset: ALDataModule, desc: str, num_neighbours: int, return_distance: bool = False):

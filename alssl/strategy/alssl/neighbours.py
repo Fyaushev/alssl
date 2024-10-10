@@ -22,7 +22,7 @@ class NeighboursStrategy(BaseStrategy):
         # if get_current_iteration():
         #     neighbours_original_inds = np.load(get_previous_iteration_dir() / 'neighbours_inds.npy')    
         # else:
-        previous_model = almodel.get_lightning_module()
+        previous_model = almodel.get_lightning_module()(**almodel.get_hyperparameters())
         # load weights from previous iteration if available
         if get_current_iteration():
             previous_model.load_state_dict(get_previous_interation_state_dict())

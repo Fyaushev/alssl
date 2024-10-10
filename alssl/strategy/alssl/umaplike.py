@@ -88,15 +88,15 @@ class UMAPLikeStrategy(BaseStrategy):
         # if get_current_iteration():
         #     neighbours_original_inds = np.load(get_previous_iteration_dir() / 'neighbours_inds.npy') 
         # else:
-        previous_model = almodel.get_lightning_module()
+        previous_model = almodel.get_lightning_module()(**almodel.get_hyperparameters())
         # load weights from previous iteration if available
         if get_current_iteration():
             previous_model.load_state_dict(get_previous_interation_state_dict())
 
-        embeddings_original, neighbours_original_inds = get_neighbours(previous_model, dataset, desc="original")
+        embeddings_original, neighbours_original_inds = get_neighbours(previous_model, dataset, desc="original", num_neighbours=self.num_neighbours)
 
         # generate neighbours for current iteration and save for later
-        embeddings_finetuned, neighbours_finetuned_inds = get_neighbours(model, dataset, desc="finetuned")
+        embeddings_finetuned, neighbours_finetuned_inds = get_neighbours(model, dataset, desc="finetuned", num_neighbours=self.num_neighbours)
         np.save('neighbours_inds.npy', neighbours_finetuned_inds)
         np.save('embeddings.npy', embeddings_finetuned)
 
