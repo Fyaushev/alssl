@@ -4,13 +4,12 @@ from pathlib import Path
 
 import lightning as L
 import numpy as np
+import wandb
 from dpipe.io import load, save
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
 from lightning.pytorch.loggers import WandbLogger
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
-
-import wandb
 
 from ..data.base import ALDataModule
 from ..model.base import BaseALModel
@@ -39,6 +38,7 @@ class ALTrainer:
         initial_val_size: int,
         n_iter: int,
         random_seed: int,
+        config: dict,
         *,
         finetune=True,
         project_name="alssl",
@@ -87,6 +87,7 @@ class ALTrainer:
         self.checkpoint_every_n_epochs = checkpoint_every_n_epochs
         self.check_val_every_n_epoch = check_val_every_n_epoch
         self.num_epochs = num_epochs
+        self.config = config
         self.run_id = None
 
     def get_trainer(self, cur_exp_name):
@@ -115,6 +116,7 @@ class ALTrainer:
             id=self.run_id,
             resume="must" if self.run_id is not None else None,
             entity=self.entitiy,
+            config=self.config
         )
         self.run_id = wandb_run.id
 
