@@ -144,8 +144,8 @@ class ALTrainer:
         trainer.fit(module, datamodule=self.al_datamodule)
         trainer.validate(module, datamodule=self.al_datamodule, verbose=False)
         test_metrics = trainer.test(module, datamodule=self.al_datamodule, verbose=False)
-        self.log_summary(i, test_metrics)
         wandb_run.finish()
+        self.log_summary(i, test_metrics)
         return module
     
     def load_model(self, curr_dir, prev_dir, iteration):
