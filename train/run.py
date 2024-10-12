@@ -54,10 +54,12 @@ def run_exp(config: DictConfig) -> None:
     budget_size = int(config.strategy.budget_percent / 100 * N)
     initial_train_size = int(config.strategy.initial_train_percent / 100 * N)
 
+    exp_name = config.strategy.strategy_name + '_'.join([f'{k}-{v}' for k, v in config.strategy.strategy_params.items()])
+
     # Initialize the Active Learning trainer
     trainer = ALTrainer(
         exp_root_path=root_path / str(config.strategy.initial_train_percent) / str(config.training.random_seed) / str(config.strategy.budget_percent),
-        exp_name=config.strategy.strategy_name,
+        exp_name=exp_name,
         al_strategy=partial(strategies[config.strategy.strategy_name], **config.strategy.strategy_params)(),
         al_datamodule=data_module,
         al_model=model,
@@ -69,7 +71,7 @@ def run_exp(config: DictConfig) -> None:
         
         random_seed=config.training.random_seed,
         num_epochs=config.training.num_epochs,
-        checkpoint_every_n_epochs=config.training.checkpoint_every_n_epochs,
+        checkpoint_every_n_epochs=config.training.num_epochs-1,
         config=OmegaConf.to_container(config),
     )
     trainer.run()
