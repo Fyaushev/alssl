@@ -159,7 +159,7 @@ class ALTrainer:
         """
         checkpoint_path = last_checkpoint(curr_dir)
         is_fully_trained = checkpoint_path is not None and checkpoint_path.stem.startswith(f'epoch={self.num_epochs - 1}')
-        if iteration > 0 and checkpoint_path is None or not is_fully_trained:
+        if iteration > 0 and (checkpoint_path is None or not is_fully_trained):
             checkpoint_path = last_checkpoint(prev_dir)
 
         if iteration > 1:
@@ -202,19 +202,18 @@ class ALTrainer:
         for i in tqdm(range(self.n_iter), desc="AL iteration", colour='green'):
             curr_dir = zero_iteration_dir if i == 0 else self.exp_path / f"iter_{i}"
             prev_dir = zero_iteration_dir if i == 1 else self.exp_path / f"iter_{i - 1}"
-
             # if we already saved the selected ids of this round, the iteration is complete
             if (curr_dir / "train_ids_after_update.json").exists():
                 self.al_datamodule.set_train_ids(load(curr_dir / "train_ids_after_update.json"))
                 continue
             # for the first iteration, we don't save the selected ids, because it is a shared folder
-            if i == 0 and (self.exp_path / f"iter_{i+1}" / "train_ids.json").exists():
-                self.al_datamodule.set_train_ids(load(self.exp_path / f"iter_{i+1}" / "train_ids.json"))
+            if i == 0 and (self.exp_path / f"iter_1" / "train_ids.json").exists():
+                self.al_datamodule.set_train_ids(load(self.exp_path / f"iter_1" / "train_ids.json"))
                 continue
 
             efficient_chdir(curr_dir)
-            
             model, is_fully_trained = self.load_model(curr_dir, prev_dir, i)
+            print('is_fully_trained', is_fully_trained)
             self.train_model(i, curr_dir, model, is_fully_trained)
 
             active_learning_id = self.al_strategy.select_ids(

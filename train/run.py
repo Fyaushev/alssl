@@ -71,7 +71,7 @@ def run_exp(config: DictConfig) -> None:
         
         random_seed=config.training.random_seed,
         num_epochs=config.training.num_epochs,
-        checkpoint_every_n_epochs=config.training.num_epochs-1,
+        checkpoint_every_n_epochs=config.training.num_epochs,
         config=OmegaConf.to_container(config),
     )
     trainer.run()
