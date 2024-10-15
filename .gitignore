@@ -24,7 +24,7 @@ pip-delete-this-directory.txt
 notebooks/*
 notebooks/Untitled*
 
-train/*
+# train/*
 wandb/*
 
 # PyCharm
