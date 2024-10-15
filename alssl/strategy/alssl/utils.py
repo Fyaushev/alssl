@@ -36,7 +36,7 @@ def get_previous_interation_state_dict():
     return last_checkpoint(previous_iteration_dir)
 
 
-def get_neighbours(model: nn.Module, dataset: ALDataModule, desc: str, num_neighbours: int, return_distance: bool = False):
+def get_neighbours(model: nn.Module, dataset: ALDataModule, desc: str, num_neighbours: int, return_distance: bool = False, metric: str = 'minkowski'):
     '''
     Obtain embeddings and find `num_neighbours` nearest neighbours in the same embedding space
     '''
@@ -46,7 +46,7 @@ def get_neighbours(model: nn.Module, dataset: ALDataModule, desc: str, num_neigh
         scoring="none", desc=desc)
 
     # fit KN 
-    neigh = NearestNeighbors(n_neighbors=num_neighbours)
+    neigh = NearestNeighbors(n_neighbors=num_neighbours, metric=metric)
     neigh.fit(X=embeddings)
 
     if return_distance:

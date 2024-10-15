@@ -78,8 +78,9 @@ class UMAPLikeStrategy(BaseStrategy):
     https://github.com/NikolayOskolkov/HowUMAPWorks/blob/master/HowUMAPWorks.ipynb
     '''
 
-    def __init__(self, num_neighbours: int, num_neighbours_umap: Optional[int]=None):
+    def __init__(self, num_neighbours: int, metric: str='minkowski', num_neighbours_umap: Optional[int]=None):
         self.num_neighbours = num_neighbours
+        self.metric = metric
         self.num_neighbours_umap = num_neighbours_umap if num_neighbours_umap is not None else num_neighbours * 2
 
     def select_ids(self, model: nn.Module, dataset: ALDataModule, budget: int, almodel: BaseALModel):
@@ -93,10 +94,10 @@ class UMAPLikeStrategy(BaseStrategy):
         if get_current_iteration():
             previous_model.load_state_dict(get_previous_interation_state_dict())
 
-        embeddings_original, neighbours_original_inds = get_neighbours(previous_model, dataset, desc="original", num_neighbours=self.num_neighbours)
+        embeddings_original, neighbours_original_inds = get_neighbours(previous_model, dataset, desc="original", num_neighbours=self.num_neighbours, metric=self.metric)
 
         # generate neighbours for current iteration and save for later
-        embeddings_finetuned, neighbours_finetuned_inds = get_neighbours(model, dataset, desc="finetuned", num_neighbours=self.num_neighbours)
+        embeddings_finetuned, neighbours_finetuned_inds = get_neighbours(model, dataset, desc="finetuned", num_neighbours=self.num_neighbours, metric=self.metric)
         np.save('neighbours_inds.npy', neighbours_finetuned_inds)
         np.save('embeddings.npy', embeddings_finetuned)
 

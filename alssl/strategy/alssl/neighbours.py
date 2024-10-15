@@ -13,8 +13,9 @@ from .utils import (get_current_iteration, get_neighbours,
 
 class NeighboursStrategy(BaseStrategy):
 
-    def __init__(self, num_neighbours: int):
+    def __init__(self, num_neighbours: int, metric='minkowski'):
         self.num_neighbours = num_neighbours + 1 # NearestNeighbors outputs point itself as neighbour
+        self.metric = metric
 
     def select_ids(self, model: nn.Module, dataset: ALDataModule, budget: int, almodel: BaseALModel):
 
@@ -27,10 +28,10 @@ class NeighboursStrategy(BaseStrategy):
         if get_current_iteration():
             previous_model.load_state_dict(get_previous_interation_state_dict())
 
-        _, neighbours_original_inds = get_neighbours(previous_model, dataset, desc="original", num_neighbours=self.num_neighbours)
+        _, neighbours_original_inds = get_neighbours(previous_model, dataset, desc="original", num_neighbours=self.num_neighbours, metric=self.metric)
 
         # generate neighbours for current iteration and save for later
-        _, neighbours_finetuned_inds = get_neighbours(model, dataset, desc="finetuned", num_neighbours=self.num_neighbours)
+        _, neighbours_finetuned_inds = get_neighbours(model, dataset, desc="finetuned", num_neighbours=self.num_neighbours, metric=self.metric)
         np.save('neighbours_inds.npy', neighbours_finetuned_inds)
 
         scores = []
