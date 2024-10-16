@@ -83,9 +83,10 @@ class UMAPLikeStrategy(BaseStrategy):
     https://github.com/NikolayOskolkov/HowUMAPWorks/blob/master/HowUMAPWorks.ipynb
     '''
 
-    def __init__(self, num_neighbours: int, metric: str='minkowski', num_neighbours_umap: Optional[int]=None):
+    def __init__(self, num_neighbours: int, metric: str='minkowski', take_lowest: bool = False, num_neighbours_umap: Optional[int]=None):
         self.num_neighbours = num_neighbours
         self.metric = metric
+        self.take_lowest = take_lowest
         self.num_neighbours_umap = num_neighbours_umap if num_neighbours_umap is not None else num_neighbours * 2
 
     def select_ids(self, model: nn.Module, dataset: ALDataModule, budget: int, almodel: BaseALModel):
@@ -124,5 +125,8 @@ class UMAPLikeStrategy(BaseStrategy):
             scores.append(np.mean(ce))
 
         unlabeled_ids = dataset.get_unlabeled_ids()
-        # need to take the lowest scores
-        return np.array(unlabeled_ids)[np.argsort(scores)][:budget].tolist()
+        # need to take the highest scores
+        if self.take_lowest:
+            return np.array(unlabeled_ids)[np.argsort(scores)][:budget].tolist()
+        else:
+            return np.array(unlabeled_ids)[np.argsort(scores)][-budget:].tolist()
