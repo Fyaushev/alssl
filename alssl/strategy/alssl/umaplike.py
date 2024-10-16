@@ -1,7 +1,7 @@
 from typing import Optional
 
 import numpy as np
-from sklearn.metrics.pairwise import euclidean_distances
+from sklearn.metrics.pairwise import cosine_distances, euclidean_distances
 from torch import nn
 from tqdm import tqdm
 
@@ -45,9 +45,14 @@ def sigma_binary_search(k_of_sigma, fixed_k):
             break
     return approx_sigma
 
-def construct_graph(X_train, N_NEIGHBOR):
+def construct_graph(X_train, N_NEIGHBOR, metric='minkowski'):
     # get martix of squared pairwise Euclidean distances for the initial high-dimensions set
-    dist = np.square(euclidean_distances(X_train, X_train))
+    if metric=='minkowski':
+        dist = np.square(euclidean_distances(X_train, X_train))
+    elif metric=='cosine':
+        dist = np.square(cosine_distances(X_train, X_train))
+    else:
+        raise Exception(f"selected metric {metric} is not implemented")
 
     # distance to the nearest neighbour for each point
     rho = [sorted(dist[i])[1] for i in range(dist.shape[0])] # [1] because [0] will always be zero
