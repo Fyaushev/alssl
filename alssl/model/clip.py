@@ -22,7 +22,7 @@ class CLIPClassifier(nn.Module):
         image_embeddings = self.clip_model.get_image_features(pixel_values=x)
         # Pass the embeddings through the classification head
         logits = self.classifier(image_embeddings)
-        return logits
+        return logits, image_embeddings
     
 class LightningCLIPClassifier(L.LightningModule):
     def __init__(
