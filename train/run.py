@@ -9,6 +9,7 @@ from omegaconf import DictConfig, OmegaConf
 from alssl.al.train import ALTrainer
 from alssl.data.base import ALDataModule
 from alssl.model.base import BaseALModel
+from alssl.model.clip import LightningCLIPClassifier
 from alssl.model.dino import LightningDinoClassifier
 from alssl.strategy import strategies
 
@@ -19,7 +20,7 @@ ALTrainer, BaseALModel, ALDataModule
 def run_exp(config: DictConfig) -> None:
     # Load the dataset
     ds_utils = importlib.import_module(f'alssl.data.img_classification.{config.experiment.dataset}')
-    root_path = Path(config.experiment.exp_root_path) / config.experiment.dataset
+    root_path = Path(config.experiment.exp_root_path) / config.experiment.dataset / config.training.backbone
     data_path = Path(config.experiment.data_path) / config.experiment.dataset
 
     train_dataset = ds_utils.get_dataset(subset="train", data_path=data_path)
@@ -37,7 +38,10 @@ def run_exp(config: DictConfig) -> None:
 
     class Model(BaseALModel):
         def get_lightning_module(self):
-            return LightningDinoClassifier
+            if config.training.backbone == 'dino':
+                return LightningDinoClassifier
+            elif config.training.backbone == 'clip':
+                return LightningCLIPClassifier
         def get_hyperparameters(self):
             return {
                 'learning_rate':config.training.learning_rate,

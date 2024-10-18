@@ -13,8 +13,9 @@ strategy:
   n_iter: 2
 
 training:
+  backbone: dino
   batch_size: 100
-  num_epochs: 2 #50
+  num_epochs: 50
   learning_rate: 0.00001
   random_seed: 0
   num_workers: 16
