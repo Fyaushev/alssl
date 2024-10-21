@@ -1,4 +1,5 @@
 from collections import deque
+import heapq
 from typing import Optional
 
 import numpy as np
@@ -41,64 +42,48 @@ def bfs_shortest_path(graph, start, goal):
 
     return -1  # No path found
 
+# Function to calculate the Euclidean distance between two points
+def euclidean_distance(point1, point2):
+    return np.linalg.norm(point1 - point2)
 
-def prob_high_dim(sigma, dist_row, dist, rho):
-    """
-    For each row of Euclidean distance matrix (dist_row) compute
-    probability in high dimensions (1D array)
-    """
-    d = dist[dist_row] - rho[dist_row]
-    d[d < 0] = 0
-    return np.exp(- d / sigma)
+# Convert the unweighted graph to a weighted graph
+def create_weighted_graph(unweighted_graph, embeddings):
+    weighted_graph = {}
+    
+    for node, neighbors in enumerate(unweighted_graph):
+        weighted_graph[node] = []
+        for neighbor in neighbors:
+            dist = euclidean_distance(embeddings[node], embeddings[neighbor])
+            weighted_graph[node].append((neighbor, dist))
+    
+    return weighted_graph
 
-def k(prob):
-    """
-    Compute n_neighbor = k (scalar) for each 1D array of high-dimensional probability
-    """
-    return np.power(2, np.sum(prob))
+# Dijkstra's algorithm to find the shortest path in the weighted graph
+def dijkstra_shortest_path(weighted_graph, start, goal):
+    queue = [(0, start)]  # Priority queue: (distance, node)
+    distances = {start: 0}  # Distance from start to each node
+    previous_nodes = {start: None}  # To store the path
+    
+    while queue:
+        current_distance, node = heapq.heappop(queue)
+        
+        if node == goal:
+            # Reconstruct the shortest path from start to goal
+            path = []
+            while node is not None:
+                path.append(node)
+                node = previous_nodes[node]
+            return distances[goal]  # Return distance
+        
+        for neighbor, weight in weighted_graph[node]:
+            distance = current_distance + weight
+            if neighbor not in distances or distance < distances[neighbor]:
+                distances[neighbor] = distance
+                previous_nodes[neighbor] = node
+                heapq.heappush(queue, (distance, neighbor))
+    
+    return None  # No path found
 
-def sigma_binary_search(k_of_sigma, fixed_k):
-    """
-    Solve equation k_of_sigma(sigma) = fixed_k 
-    with respect to sigma by the binary search algorithm
-    """
-    sigma_lower_limit = 0
-    sigma_upper_limit = 1000
-    for i in range(20):
-        approx_sigma = (sigma_lower_limit + sigma_upper_limit) / 2
-        if k_of_sigma(approx_sigma) < fixed_k:
-            sigma_lower_limit = approx_sigma
-        else:
-            sigma_upper_limit = approx_sigma
-        if np.abs(fixed_k - k_of_sigma(approx_sigma)) <= 1e-5:
-            break
-    return approx_sigma
-
-def construct_graph(X_train, N_NEIGHBOR, metric='minkowski'):
-    # get martix of squared pairwise Euclidean distances for the initial high-dimensions set
-    if metric=='minkowski':
-        dist = np.square(euclidean_distances(X_train, X_train))
-    elif metric=='cosine':
-        dist = np.square(cosine_distances(X_train, X_train))
-    else:
-        raise Exception(f"selected metric {metric} is not implemented")
-
-    # distance to the nearest neighbour for each point
-    rho = [sorted(dist[i])[1] for i in range(dist.shape[0])] # [1] because [0] will always be zero
-
-    # get number of objects
-    n = X_train.shape[0]
-
-    # build weighted oriented graph
-    prob = np.zeros((n,n))
-    for dist_row in range(n):
-        func = lambda sigma: k(prob_high_dim(sigma, dist_row, dist, rho))
-        binary_search_result = sigma_binary_search(func, N_NEIGHBOR)
-        prob[dist_row] = prob_high_dim(binary_search_result, dist_row, dist, rho)
-
-    # apply the symmetry condition 
-    P = (prob + np.transpose(prob)) / 2
-    return P
 
 
 class NeighboursPathStrategy(BaseStrategy):
@@ -129,6 +114,8 @@ class NeighboursPathStrategy(BaseStrategy):
         np.save('neighbours_inds_original.npy', neighbours_original_inds)
         np.save('neighbours_inds.npy', neighbours_finetuned_inds)
         np.save('embeddings.npy', embeddings_finetuned)
+        
+        weighted_graph = create_weighted_graph(neighbours_finetuned_inds, embeddings_finetuned)
 
         scores = []
         point_i = 0
@@ -137,13 +124,14 @@ class NeighboursPathStrategy(BaseStrategy):
                                                               desc="Calculating nn distances for neighbours"):
             
             # for each point i obtain a set of points that take into account the neighbors from E0 and E1.
-            original_notpreserved_neighbours = np.array(list(set(neighbours_original) - set(neighbours_finetuned)))
+            # original_notpreserved_neighbours = np.array(list(set(neighbours_original) - set(neighbours_finetuned)))
 
-            path_sizes = [bfs_shortest_path(embeddings_finetuned, point_i, lost_neighbour) for lost_neighbour in original_notpreserved_neighbours]
+            path_sizes = [dijkstra_shortest_path(weighted_graph,  point_i, lost_neighbour) for lost_neighbour in neighbours_original]
+            path_sizes = [i for i in path_sizes if i != None] # filter points where the path was not found
             if len(path_sizes):
-                scores.append(np.mean(path_sizes))
+                scores.append(np.median(path_sizes))
             else:
-                scores.append(np.mean(path_sizes))
+                scores.append(0)
             point_i += 1
 
         unlabeled_ids = dataset.get_unlabeled_ids()
