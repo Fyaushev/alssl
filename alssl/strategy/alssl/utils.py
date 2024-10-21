@@ -23,7 +23,7 @@ def get_previous_iteration_dir():
     if curr_iter == 0:
         return
     elif curr_iter == 1:
-        return curr_dir.parent.parent / 'zero_iteration'
+        return curr_dir.parent.parent.parent / 'zero_iteration'
     else:
         return curr_dir.parents[0] / f'iter_{curr_iter - 1}'
     # experiment_name = curr_dir.name.split('_')[0]
@@ -33,7 +33,8 @@ def get_previous_iteration_dir():
 
 def get_previous_interation_state_dict():
     previous_iteration_dir = get_previous_iteration_dir()
-    return last_checkpoint(previous_iteration_dir)
+    print("previous_iteration_dir", previous_iteration_dir)
+    return torch.load(last_checkpoint(previous_iteration_dir))["state_dict"]
 
 
 def get_neighbours(model: nn.Module, dataset: ALDataModule, desc: str, num_neighbours: int, return_distance: bool = False, metric: str = 'minkowski'):

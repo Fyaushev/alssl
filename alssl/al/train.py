@@ -215,7 +215,11 @@ class ALTrainer:
             model, is_fully_trained = self.load_model(curr_dir, prev_dir, i)
             print('is_fully_trained', is_fully_trained)
             self.train_model(i, curr_dir, model, is_fully_trained)
-
+            
+            # no need to select new ids if we are on the last iteration
+            if i == (self.n_iter - 1):
+                continue
+            
             active_learning_id = self.al_strategy.select_ids(
                 model, self.al_datamodule, self.budget_size, self.al_model
             )
