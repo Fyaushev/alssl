@@ -10,6 +10,8 @@ if sys.version_info[0] == 2:
 else:
     from urllib.request import urlretrieve
 
+import shutil
+
 from torch.utils.data import DataLoader
 
 
@@ -29,6 +31,17 @@ def download_tinyImg200(path,
     zip_ref = zipfile.ZipFile(os.path.join(path,tarname), 'r')
     zip_ref.extractall()
     zip_ref.close()
+
+def sort_val_images(data_path: Path):
+    if (data_path / "val_sorted").exists():
+        return
+    (data_path / "val_sorted").mkdir(exist_ok=True)
+    with open(data_path / "val" / "val_annotations.txt") as f:
+        for line in f:
+            img_name, cls, _, _, _, _ = line.split('\t')
+            (data_path / "val_sorted" / cls / "images").mkdir(exist_ok=True, parents=True)
+            shutil.copyfile(data_path / "val" / "images" / img_name, data_path / "val_sorted" / cls / "images" / img_name)
+    
 
 transform_train = transforms.Compose(
     [
@@ -56,10 +69,11 @@ def get_dataset(subset="train", data_path=Path("/shared/projects/active_learning
     assert subset in ["train", "test"]
     transform = transform_train if subset == "train" else transform_test
     download_tinyImg200(data_path)
+    sort_val_images(data_path)
     if subset == "train":
         data_path = data_path / "train"
     else:
-        data_path = data_path / "val"
+        data_path = data_path / "val_sorted"
     return torchvision.datasets.ImageFolder(
         root=data_path, transform=transform
     )
