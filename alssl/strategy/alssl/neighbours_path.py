@@ -1,5 +1,5 @@
-from collections import deque
 import heapq
+from collections import deque
 from typing import Optional
 
 import numpy as np
@@ -94,11 +94,11 @@ class NeighboursPathStrategy(BaseStrategy):
     3) для каждого такого соседа находим его расстояние до точки i в E1 как минимальное расстояние в графе случайных соседей
     '''
 
-    def __init__(self, num_neighbours: int, metric: str='minkowski', take_lowest: bool = False, num_neighbours_umap: Optional[int]=None):
+    def __init__(self, num_neighbours: int, metric: str='minkowski', take_lowest: bool = False, prefilter_x: Optional[int]=None):
         self.num_neighbours = num_neighbours
         self.metric = metric
         self.take_lowest = take_lowest
-        self.num_neighbours_umap = num_neighbours_umap if num_neighbours_umap is not None else num_neighbours * 2
+        self.prefilter_x = prefilter_x
 
     def select_ids(self, model: nn.Module, dataset: ALDataModule, budget: int, almodel: BaseALModel):
 
@@ -117,6 +117,19 @@ class NeighboursPathStrategy(BaseStrategy):
         
         weighted_graph = create_weighted_graph(neighbours_finetuned_inds, embeddings_finetuned)
 
+        if self.prefilter_x is not None:
+            prefilter_scores = []
+            for neighbours_original, neighbours_finetuned in tqdm(zip(neighbours_original_inds, neighbours_finetuned_inds), 
+                                                                total=neighbours_finetuned_inds.shape[0], 
+                                                                desc="Finding neighbours intersection for every unlabeled data point"):
+                # find number of intersecting neighbours
+                number_saved_neighbours = len(set(neighbours_original) & set(neighbours_finetuned))
+
+                prefilter_scores.append(number_saved_neighbours)
+
+            prefilter_mask = np.zeros_like(prefilter_scores)
+            prefilter_mask[np.argpartition(-prefilter_scores, -(budget * self.prefilter_x))[-(budget * self.prefilter_x):]] = 1
+
         scores = []
         point_i = 0
         for neighbours_original, neighbours_finetuned in tqdm(zip(neighbours_original_inds, neighbours_finetuned_inds),
@@ -125,6 +138,8 @@ class NeighboursPathStrategy(BaseStrategy):
             
             # for each point i obtain a set of points that take into account the neighbors from E0 and E1.
             # original_notpreserved_neighbours = np.array(list(set(neighbours_original) - set(neighbours_finetuned)))
+            if not prefilter_mask[point_i]:
+                continue
 
             path_sizes = [dijkstra_shortest_path(weighted_graph,  point_i, lost_neighbour) for lost_neighbour in neighbours_original]
             path_sizes = [i for i in path_sizes if i != None] # filter points where the path was not found
