@@ -13,13 +13,6 @@ from .utils import (get_current_iteration, get_neighbours,
                     get_previous_iteration_dir)
 
 
-def make_closeness(min_distance):
-    return lambda p, ps: np.linalg.norm(p - ps, axis=-1) > min_distance
-
-def closeness(reference_neighbors, keypoints):
-    return np.isin(keypoints, reference_neighbors)
-
-
 def non_max_suppression(keypoints: np.ndarray, scores: np.ndarray, neighbors: np.ndarray, max_closeness: float = None,
                         min_score=-np.inf, max_boxes=np.inf):
     """
@@ -57,8 +50,8 @@ def non_max_suppression(keypoints: np.ndarray, scores: np.ndarray, neighbors: np
     while keypoints.size and len(results) < max_boxes:
         idx = scores.argmax()
         reference = keypoints[idx]
-        reference_neighbors = neighbors[idx][1:] # first one is our point
-        far_enough = np.isin(keypoints, reference_neighbors)
+        reference_neighbors = neighbors[idx] #[1:] # first one is our point
+        far_enough = np.isin(indices, reference_neighbors)
         # closeness(reference_neighbors, keypoints)
         if max_closeness is not None:
             assert far_enough.dtype != bool, far_enough.dtype
@@ -95,10 +88,13 @@ class NeighboursNMSStrategy(BaseStrategy):
             previous_model.load_state_dict(get_previous_interation_state_dict())
 
         embeddings_original, neighbours_original_inds = get_neighbours(previous_model, dataset, desc="original", num_neighbours=self.num_neighbours, metric=self.metric)
+        np.save('embeddings_original.npy', embeddings_original)
+        np.save('neighbours_original_inds.npy', neighbours_original_inds)
 
         # generate neighbours for current iteration and save for later
         embeddings_finetuned, neighbours_finetuned_inds = get_neighbours(model, dataset, desc="finetuned", num_neighbours=self.num_neighbours, metric=self.metric)
-        np.save('neighbours_inds.npy', neighbours_finetuned_inds)
+        np.save('embeddings_finetuned.npy', embeddings_finetuned)
+        np.save('neighbours_finetuned_inds.npy', neighbours_finetuned_inds)
 
         scores = []
         for neighbours_original, neighbours_finetuned in tqdm(zip(neighbours_original_inds, neighbours_finetuned_inds), 
@@ -108,6 +104,8 @@ class NeighboursNMSStrategy(BaseStrategy):
             number_saved_neighbours = len(set(neighbours_original) & set(neighbours_finetuned))
 
             scores.append(number_saved_neighbours)
+
+        np.save('scores.npy', np.array(scores))
 
         nms_indices = non_max_suppression(embeddings_finetuned, np.array(scores), neighbours_finetuned_inds)
 
