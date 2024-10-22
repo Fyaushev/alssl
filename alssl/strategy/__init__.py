@@ -1,4 +1,5 @@
 from .alssl.neighbours import NeighboursStrategy
+from .alssl.neighbours_nms import NeighboursNMSStrategy
 from .alssl.neighbours_path import NeighboursPathStrategy
 from .alssl.umaplike import UMAPLikeStrategy
 from .badge import BADGEStrategy
