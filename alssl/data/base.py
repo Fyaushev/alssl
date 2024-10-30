@@ -19,6 +19,7 @@ class ALDataModule(L.LightningDataModule):
         test_ids: list | None = None,
         num_workers: int = 8,
         shuffle: bool = False,
+        unl_batch_size: int | None = None,
     ):
         """
         Args:
@@ -50,6 +51,12 @@ class ALDataModule(L.LightningDataModule):
         assert hasattr(full_train_dataset, "transform")
 
         self.batch_size = batch_size
+
+        if unl_batch_size is None:
+            unl_batch_size = batch_size
+
+        self.unl_batch_size = unl_batch_size
+
         self.num_workers = num_workers
         self.shuffle = shuffle
 
@@ -95,7 +102,7 @@ class ALDataModule(L.LightningDataModule):
             if self.test_ids
             else self.full_test_dataset
         )
-    
+
     def get_unlabeled_dataset(self) -> Dataset:
         """
         Get the unlabeled dataset subset or the train dataset.
@@ -141,11 +148,11 @@ class ALDataModule(L.LightningDataModule):
             shuffle=False,
             num_workers=self.num_workers,
         )
-    
+
     def unlabeled_dataloader(self):
         return DataLoader(
             self.get_unlabeled_dataset(),
-            batch_size=self.batch_size,
+            batch_size=self.unl_batch_size,
             shuffle=False,
             num_workers=self.num_workers,
         )
