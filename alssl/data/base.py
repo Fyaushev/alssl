@@ -13,6 +13,7 @@ class ALDataModule(L.LightningDataModule):
         full_train_dataset: Dataset,
         full_test_dataset: Dataset,
         batch_size: int,
+        batch_size_prediction: int,
         *,
         train_ids: list = [],
         val_ids: list = [],
@@ -25,6 +26,7 @@ class ALDataModule(L.LightningDataModule):
             full_train_dataset (Dataset): The complete training dataset.
             full_test_dataset (Dataset): The complete test dataset.
             batch_size (int): The batch size for DataLoaders.
+            batch_size_prediction (int): The batch size for inference DataLoaders.
             train_ids (List[int], optional): Indices for the training dataset (default is an empty list).
             val_ids (List[int], optional): Indices for the validation dataset (default is an empty list).
             test_ids (Optional[List[int]], optional): Indices for the test dataset, if any (default is None).
@@ -50,6 +52,7 @@ class ALDataModule(L.LightningDataModule):
         assert hasattr(full_train_dataset, "transform")
 
         self.batch_size = batch_size
+        self.batch_size_prediction = batch_size_prediction
         self.num_workers = num_workers
         self.shuffle = shuffle
 
@@ -145,7 +148,7 @@ class ALDataModule(L.LightningDataModule):
     def unlabeled_dataloader(self):
         return DataLoader(
             self.get_unlabeled_dataset(),
-            batch_size=self.batch_size,
+            batch_size=self.batch_size_prediction,
             shuffle=False,
             num_workers=self.num_workers,
         )

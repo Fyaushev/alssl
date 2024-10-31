@@ -47,7 +47,7 @@ def get_neighbours(model: nn.Module, dataset: ALDataModule, desc: str, num_neigh
         scoring="none", desc=desc)
 
     # fit KN 
-    neigh = NearestNeighbors(n_neighbors=num_neighbours, metric=metric)
+    neigh = NearestNeighbors(n_neighbors=num_neighbours, metric=metric, n_jobs=-1)
     neigh.fit(X=embeddings)
 
     if return_distance:

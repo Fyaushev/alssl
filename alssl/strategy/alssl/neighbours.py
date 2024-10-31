@@ -1,4 +1,6 @@
 
+from pathlib import Path
+
 import numpy as np
 from torch import nn
 from tqdm import tqdm
@@ -19,20 +21,27 @@ class NeighboursStrategy(BaseStrategy):
 
     def select_ids(self, model: nn.Module, dataset: ALDataModule, budget: int, almodel: BaseALModel):
 
-        # get neighbours for previous iteration and save for later
-        # if get_current_iteration():
-        #     neighbours_original_inds = np.load(get_previous_iteration_dir() / 'neighbours_inds.npy')    
-        # else:
-        previous_model = almodel.get_lightning_module()(**almodel.get_hyperparameters())
-        # load weights from previous iteration if available
-        if get_current_iteration():
-            previous_model.load_state_dict(get_previous_interation_state_dict())
+        if Path('embeddings_original.npy').exists() and Path('neighbours_original_inds.npy').exists():
+            e0 = np.load('embeddings_original.npy')
+            neighbours_original_inds = np.load('neighbours_original_inds.npy')
+        else:
+            previous_model = almodel.get_lightning_module()(**almodel.get_hyperparameters())
+            # load weights from previous iteration if available
+            if get_current_iteration():
+                previous_model.load_state_dict(get_previous_interation_state_dict())
 
-        _, neighbours_original_inds = get_neighbours(previous_model, dataset, desc="original", num_neighbours=self.num_neighbours, metric=self.metric)
-
+            e0, neighbours_original_inds = get_neighbours(previous_model, dataset, desc="original", num_neighbours=self.num_neighbours, metric=self.metric)
+            np.save('embeddings_original.npy', e0)
+            np.save('neighbours_original_inds.npy', neighbours_original_inds)
+        
         # generate neighbours for current iteration and save for later
-        _, neighbours_finetuned_inds = get_neighbours(model, dataset, desc="finetuned", num_neighbours=self.num_neighbours, metric=self.metric)
-        np.save('neighbours_inds.npy', neighbours_finetuned_inds)
+        if Path(f'embeddings_finetuned_{self.num_neighbours}_{self.metric}.npy').exists() and Path(f'neighbours_finetuned_inds_{self.num_neighbours}_{self.metric}.npy').exists():
+            e1 = np.load(f'embeddings_finetuned_{self.num_neighbours}_{self.metric}.npy')
+            neighbours_finetuned_inds = np.load(f'neighbours_finetuned_inds_{self.num_neighbours}_{self.metric}.npy')
+        else:
+            e1, neighbours_finetuned_inds = get_neighbours(model, dataset, desc="finetuned", num_neighbours=self.num_neighbours, metric=self.metric)
+            np.save(f'embeddings_finetuned_{self.num_neighbours}_{self.metric}.npy', e1)
+            np.save(f'neighbours_finetuned_inds_{self.num_neighbours}_{self.metric}.npy', neighbours_finetuned_inds)
 
         scores = []
         for neighbours_original, neighbours_finetuned in tqdm(zip(neighbours_original_inds, neighbours_finetuned_inds), 
@@ -42,7 +51,7 @@ class NeighboursStrategy(BaseStrategy):
             number_saved_neighbours = len(set(neighbours_original) & set(neighbours_finetuned))
 
             scores.append(number_saved_neighbours)
-
+        np.save(f'scores_{self.num_neighbours}_{self.metric}.npy', np.array(scores))
         unlabeled_ids = dataset.get_unlabeled_ids()
         # need to take the lowest scores
         return np.array(unlabeled_ids)[np.argsort(scores)][:budget].tolist()
