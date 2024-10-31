@@ -22,12 +22,17 @@ transform_test = transforms.Compose(
     ]
 )
 
+
 def get_num_classes():
     return 10
 
-def get_dataset(subset="train", data_path=Path("/shared/projects/active_learning/svhn")):
+
+def get_dataset(
+    subset="train", data_path=Path("/shared/projects/active_learning/svhn")
+):
     assert subset in ["train", "test"]
     transform = transform_train if subset == "train" else transform_test
-    return torchvision.datasets.SVHN(
-        root=data_path, split=subset, download=True, transform=transform
+    return (
+        torchvision.datasets.SVHN(root=data_path, split=subset, download=True),
+        transform,
     )

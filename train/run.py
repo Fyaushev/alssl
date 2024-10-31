@@ -24,17 +24,20 @@ def run_exp(config: DictConfig) -> None:
     root_path = Path(config.experiment.exp_root_path) / config.experiment.dataset / config.training.backbone
     data_path = Path(config.experiment.data_path) / config.experiment.dataset
     print("start loading test_dataset")
-    test_dataset = ds_utils.get_dataset(subset="test", data_path=data_path)
+    test_dataset, transform_test = ds_utils.get_dataset(subset="test", data_path=data_path)
     print("start loading train_dataset")
-    train_dataset = ds_utils.get_dataset(subset="train", data_path=data_path)
+    train_dataset, transform_train = ds_utils.get_dataset(subset="train", data_path=data_path)
     
 
     # Initialize the Active Learning data module with the datasets and batch size
     data_module = ALDataModule(
         full_train_dataset=train_dataset,
         full_test_dataset=test_dataset,
+        transform_train=transform_train,
+        transform_test=transform_test,
         batch_size=config.training.batch_size,
         batch_size_prediction=config.training.batch_size_prediction,
+        num_workers = config.training.num_workers
     )
 
     # MODEL
@@ -80,7 +83,7 @@ def run_exp(config: DictConfig) -> None:
         random_seed=config.training.random_seed,
         num_epochs=config.training.num_epochs,
         checkpoint_every_n_epochs=config.training.num_epochs,
-        config=OmegaConf.to_container(config),
+        config=OmegaConf.to_container(config)
     )
     trainer.run()
 
