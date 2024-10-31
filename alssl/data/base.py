@@ -20,6 +20,7 @@ class ALDataModule(L.LightningDataModule):
         test_ids: list | None = None,
         num_workers: int = 8,
         shuffle: bool = False,
+        unl_batch_size: int | None = None,
     ):
         """
         Args:
@@ -98,7 +99,7 @@ class ALDataModule(L.LightningDataModule):
             if self.test_ids
             else self.full_test_dataset
         )
-    
+
     def get_unlabeled_dataset(self) -> Dataset:
         """
         Get the unlabeled dataset subset or the train dataset.
@@ -144,7 +145,7 @@ class ALDataModule(L.LightningDataModule):
             shuffle=False,
             num_workers=self.num_workers,
         )
-    
+
     def unlabeled_dataloader(self):
         return DataLoader(
             self.get_unlabeled_dataset(),

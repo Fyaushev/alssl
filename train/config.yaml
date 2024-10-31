@@ -1,21 +1,23 @@
 experiment:
   exp_root_path:  /shared/experiments/active_learning/alssl/dn/
   data_path: /shared/projects/active_learning/
-  dataset: bloodmnist
+  dataset: imagenet
 
 strategy:
-  strategy_name: EntropyStrategy
+  strategy_name: EntropyStrategy #NeighboursStrategy
   strategy_params: {}
-    # num_neighbours: 500
-  budget_percent: 5
-  initial_train_percent: 5
-  initial_val_size: 200
+    # num_neighbours: 200
+    # metric: cosine
+  budget_percent: 1
+  initial_train_percent: 1
+  initial_val_size: 5000
   n_iter: 2
 
 training:
   backbone: dino
   batch_size: 100
-  num_epochs: 50
+  batch_size_prediction: 1500
+  num_epochs: 10
   learning_rate: 0.00001
   random_seed: 0
   num_workers: 16

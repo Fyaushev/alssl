@@ -19,18 +19,22 @@ ALTrainer, BaseALModel, ALDataModule
 @hydra.main(version_base=None, config_path=".", config_name="config")
 def run_exp(config: DictConfig) -> None:
     # Load the dataset
+    print("start loading dataset")
     ds_utils = importlib.import_module(f'alssl.data.img_classification.{config.experiment.dataset}')
     root_path = Path(config.experiment.exp_root_path) / config.experiment.dataset / config.training.backbone
     data_path = Path(config.experiment.data_path) / config.experiment.dataset
-
-    train_dataset = ds_utils.get_dataset(subset="train", data_path=data_path)
+    print("start loading test_dataset")
     test_dataset = ds_utils.get_dataset(subset="test", data_path=data_path)
+    print("start loading train_dataset")
+    train_dataset = ds_utils.get_dataset(subset="train", data_path=data_path)
+    
 
     # Initialize the Active Learning data module with the datasets and batch size
     data_module = ALDataModule(
         full_train_dataset=train_dataset,
         full_test_dataset=test_dataset,
         batch_size=config.training.batch_size,
+        batch_size_prediction=config.training.batch_size_prediction,
     )
 
     # MODEL
