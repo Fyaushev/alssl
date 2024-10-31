@@ -2,6 +2,7 @@ experiment:
   exp_root_path:  /shared/experiments/active_learning/alssl/dn/
   data_path: /shared/projects/active_learning/
   dataset: imagenet
+  wandb_entitiy: dnogina
 
 strategy:
   strategy_name: EntropyStrategy #NeighboursStrategy

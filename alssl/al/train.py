@@ -45,7 +45,7 @@ class ALTrainer:
         checkpoint_every_n_epochs=50,
         num_epochs=101,
         check_val_every_n_epoch=1,
-        entitiy='dnogina'
+        entitiy=None
     ):
         """
         Args:
