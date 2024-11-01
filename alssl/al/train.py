@@ -121,6 +121,7 @@ class ALTrainer:
         self.run_id = wandb_run.id
 
         wandb_run.log(test_metrics[0], step=i)  # FIXME
+        wandb_run.log({'training_size': len(self.al_datamodule.train_ids)}, step=i)
         wandb_run.finish()
 
     def train_model(self, i, curr_dir, module, is_fully_trained):
