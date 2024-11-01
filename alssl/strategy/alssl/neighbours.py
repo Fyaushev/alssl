@@ -15,9 +15,11 @@ from .utils import (get_current_iteration, get_neighbours,
 
 class NeighboursStrategy(BaseStrategy):
 
-    def __init__(self, num_neighbours: int, metric='minkowski'):
+    def __init__(self, num_neighbours: int, metric='minkowski', fixed_budget:bool=True):
         self.num_neighbours = num_neighbours + 1 # NearestNeighbors outputs point itself as neighbour
         self.metric = metric
+        self.fixed_budget = fixed_budget
+        self.nn_thr = int(num_neighbours * 0.2)
 
     def select_ids(self, model: nn.Module, dataset: ALDataModule, budget: int, almodel: BaseALModel):
 
@@ -35,13 +37,13 @@ class NeighboursStrategy(BaseStrategy):
             np.save('neighbours_original_inds.npy', neighbours_original_inds)
         
         # generate neighbours for current iteration and save for later
-        if Path(f'embeddings_finetuned_{self.num_neighbours}_{self.metric}.npy').exists() and Path(f'neighbours_finetuned_inds_{self.num_neighbours}_{self.metric}.npy').exists():
-            e1 = np.load(f'embeddings_finetuned_{self.num_neighbours}_{self.metric}.npy')
-            neighbours_finetuned_inds = np.load(f'neighbours_finetuned_inds_{self.num_neighbours}_{self.metric}.npy')
+        if Path(f'embeddings_finetuned_{self.num_neighbours}_{self.metric}_{self.fixed_budget}.npy').exists() and Path(f'neighbours_finetuned_inds_{self.num_neighbours}_{self.metric}_{self.fixed_budget}.npy').exists():
+            e1 = np.load(f'embeddings_finetuned_{self.num_neighbours}_{self.metric}_{self.fixed_budget}.npy')
+            neighbours_finetuned_inds = np.load(f'neighbours_finetuned_inds_{self.num_neighbours}_{self.metric}_{self.fixed_budget}.npy')
         else:
             e1, neighbours_finetuned_inds = get_neighbours(model, dataset, desc="finetuned", num_neighbours=self.num_neighbours, metric=self.metric)
-            np.save(f'embeddings_finetuned_{self.num_neighbours}_{self.metric}.npy', e1)
-            np.save(f'neighbours_finetuned_inds_{self.num_neighbours}_{self.metric}.npy', neighbours_finetuned_inds)
+            np.save(f'embeddings_finetuned_{self.num_neighbours}_{self.metric}_{self.fixed_budget}.npy', e1)
+            np.save(f'neighbours_finetuned_inds_{self.num_neighbours}_{self.metric}_{self.fixed_budget}.npy', neighbours_finetuned_inds)
 
         scores = []
         for neighbours_original, neighbours_finetuned in tqdm(zip(neighbours_original_inds, neighbours_finetuned_inds), 
@@ -51,8 +53,15 @@ class NeighboursStrategy(BaseStrategy):
             number_saved_neighbours = len(set(neighbours_original) & set(neighbours_finetuned))
 
             scores.append(number_saved_neighbours)
-        np.save(f'scores_{self.num_neighbours}_{self.metric}.npy', np.array(scores))
+        scores = np.array(scores)
+        np.save(f'scores_{self.num_neighbours}_{self.metric}_{self.fixed_budget}.npy', np.array(scores))
         unlabeled_ids = dataset.get_unlabeled_ids()
         # need to take the lowest scores
-        return np.array(unlabeled_ids)[np.argsort(scores)][:budget].tolist()
+        sorting = np.argsort(scores)
+        if not self.fixed_budget:
+            mask = (scores < self.nn_thr)[sorting]
+        else:
+            mask = np.ones_like(scores, dtype=bool)
+        
+        return np.array(unlabeled_ids)[sorting][mask][:budget].tolist()
 
