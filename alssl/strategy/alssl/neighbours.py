@@ -15,11 +15,12 @@ from .utils import (get_current_iteration, get_neighbours,
 
 class NeighboursStrategy(BaseStrategy):
 
-    def __init__(self, num_neighbours: int, metric='minkowski', fixed_budget:bool=True):
+    def __init__(self, num_neighbours: int, metric='minkowski', fixed_budget:bool=True, load_from_prev_iter:bool=True):
         self.num_neighbours = num_neighbours + 1 # NearestNeighbors outputs point itself as neighbour
         self.metric = metric
         self.fixed_budget = fixed_budget
         self.nn_thr = int(num_neighbours * 0.2)
+        self.load_from_prev_iter = load_from_prev_iter
 
     def select_ids(self, model: nn.Module, dataset: ALDataModule, budget: int, almodel: BaseALModel):
 
@@ -29,7 +30,7 @@ class NeighboursStrategy(BaseStrategy):
         else:
             previous_model = almodel.get_lightning_module()(**almodel.get_hyperparameters())
             # load weights from previous iteration if available
-            if get_current_iteration():
+            if get_current_iteration() and self.load_from_prev_iter:
                 previous_model.load_state_dict(get_previous_interation_state_dict())
 
             e0, neighbours_original_inds = get_neighbours(previous_model, dataset, desc="original", num_neighbours=self.num_neighbours, metric=self.metric)
