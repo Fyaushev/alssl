@@ -153,7 +153,7 @@ class ALTrainer:
     
     def load_model(self, curr_dir, prev_dir, iteration):
         """
-        Each active learning iteration is a finetuning of the previous model.
+        Each active learning iteration is a finetuning of the previous model or training from scratch.
 
         First, load the latest checkpoint either from current or previous iteration. 
         Checkpoint restored from the current iteration will be used only if the model was fully trained. Otherwise, the training will be done from the first epoch.
@@ -162,6 +162,11 @@ class ALTrainer:
         is_fully_trained = checkpoint_path is not None and checkpoint_path.stem.startswith(f'epoch={self.num_epochs - 1}')
         if iteration > 0 and (checkpoint_path is None or not is_fully_trained):
             checkpoint_path = last_checkpoint(prev_dir)
+
+        # if we want to retrain the model from scratch, we need to account for further strategy running
+        # if the model is fully trained, it won't be retrained in the pipeline
+        if self.finetune and not is_fully_trained:
+            checkpoint_path = None
 
         if iteration > 1:
             train_ids_path = curr_dir / "train_ids.json" if (curr_dir / "train_ids.json").exists() else prev_dir / "train_ids_after_update.json"
