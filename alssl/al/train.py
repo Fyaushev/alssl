@@ -165,7 +165,7 @@ class ALTrainer:
 
         # if we want to retrain the model from scratch, we need to account for further strategy running
         # if the model is fully trained, it won't be retrained in the pipeline
-        if self.finetune and not is_fully_trained:
+        if not self.finetune and not is_fully_trained:
             checkpoint_path = None
 
         if iteration > 1:
