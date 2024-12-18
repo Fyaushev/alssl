@@ -114,7 +114,7 @@ class NeighboursStrategy(BaseStrategy):
 
         unlabeled_ids = dataset.get_unlabeled_ids()
         if self.nms:
-            neighbors = neighbours_original_inds if self.self.nms_e0 else neighbours_finetuned_inds
+            neighbors = neighbours_original_inds if self.nms_e0 else neighbours_finetuned_inds
             nms_indices = non_max_suppression(-scores, neighbors, max_boxes=budget)
             return np.array(unlabeled_ids)[nms_indices].tolist()
 
