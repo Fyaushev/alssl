@@ -151,7 +151,7 @@ class ALTrainer:
         self.log_summary(i, test_metrics)
         return module
     
-    def load_model(self, curr_dir, prev_dir, iteration):
+    def load_model(self, curr_dir, prev_dir, iteration, len_train_dataloader):
         """
         Each active learning iteration is a finetuning of the previous model or training from scratch.
 
@@ -174,12 +174,15 @@ class ALTrainer:
             self.al_datamodule.set_train_ids(load(train_ids_path))
 
         module = self.al_model.get_lightning_module()
+        hyperparams = self.al_model.get_hyperparameters()
+        hyperparams['scheduler_kwargs']['steps_per_epoch'] = len_train_dataloader
+        
         if checkpoint_path is None:
             print('do NOT load checkpoint')
-            model = module(**self.al_model.get_hyperparameters())
+            model = module(**hyperparams)
         else:
             print('DO load checkpoint')
-            model = module.load_from_checkpoint(checkpoint_path, **self.al_model.get_hyperparameters())
+            model = module.load_from_checkpoint(checkpoint_path, **hyperparams)
         print(checkpoint_path)
         return model, is_fully_trained
 
@@ -218,7 +221,7 @@ class ALTrainer:
                 continue
 
             efficient_chdir(curr_dir)
-            model, is_fully_trained = self.load_model(curr_dir, prev_dir, i)
+            model, is_fully_trained = self.load_model(curr_dir, prev_dir, i, len(self.al_datamodule.train_dataloader()))
             print('is_fully_trained', is_fully_trained)
             self.train_model(i, curr_dir, model, is_fully_trained)
             

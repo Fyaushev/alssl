@@ -55,6 +55,7 @@ def run_exp(config: DictConfig) -> None:
                 'num_classes':num_classes,
                 'optimizer_kwargs':config.training.optimizer_kwargs,
                 'scheduler_kwargs':config.training.scheduler_kwargs,
+                'include_param_loss':config.training.include_param_loss,
             }
 
     model = Model()
@@ -65,7 +66,13 @@ def run_exp(config: DictConfig) -> None:
     budget_size = int(config.strategy.budget_percent / 100 * N)
     initial_train_size = int(config.strategy.initial_train_percent / 100 * N)
 
-    exp_name = config.strategy.strategy_name + '_'.join([f'{k}-{v}' for k, v in config.strategy.strategy_params.items()])
+    print('budget_size', budget_size)
+    print('initial_train_size', initial_train_size)
+    print('N', N)
+    print('config.strategy.budget_percent', config.strategy.budget_percent)
+    print('config.strategy.initial_train_percent', config.strategy.initial_train_percent)
+
+    exp_name = config.strategy.strategy_name + '_'.join([f'{k[:4]}-{v}' for k, v in config.strategy.strategy_params.items()])
 
     # Initialize the Active Learning trainer
     trainer = ALTrainer(
@@ -80,6 +87,7 @@ def run_exp(config: DictConfig) -> None:
         initial_val_size=config.strategy.initial_val_size,
         n_iter=config.strategy.n_iter,
         
+        finetune=config.training.finetune,
         random_seed=config.training.random_seed,
         num_epochs=config.training.num_epochs,
         checkpoint_every_n_epochs=config.training.num_epochs,

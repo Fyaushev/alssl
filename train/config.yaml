@@ -5,27 +5,38 @@ experiment:
   wandb_entitiy: dnogina
 
 strategy:
-  strategy_name: EntropyStrategy #NeighboursStrategy
-  strategy_params: {}
-    # num_neighbours: 200
-    # metric: cosine
-  budget_percent: 1
-  initial_train_percent: 1
+  strategy_name: NeighboursStrategy #NeighboursEStrategy
+  strategy_params: #{}
+    num_neighbours: 100
+    metric: cosine
+    # fixed_budget: True
+    load_from_prev_iter: False
+    finetune: False
+    # p_loss: False
+    nms: True
+    comb_score: False
+    nms_e0: True
+  budget_percent: 0.5
+  initial_train_percent: 5
   initial_val_size: 5000
-  n_iter: 2
+  n_iter: 19
 
 training:
   backbone: dino
+  finetune: False
+  include_param_loss: False
   batch_size: 100
   batch_size_prediction: 1500
-  num_epochs: 10
+  num_epochs: 30
   learning_rate: 0.00001
-  random_seed: 0
-  num_workers: 16
+  random_seed: 3
+  num_workers: 1 #12
   check_val_every_n_epoch: 1
   optimizer_kwargs:
     weight_decay: 0.001
   scheduler_kwargs:
-    gamma: 0.1
-    milestones:
-      - 20
+    max_lr: 0.00001
+    epochs: 30
+    steps_per_epoch: 100
+    # milestones:
+    #   - 20

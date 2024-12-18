@@ -126,16 +126,16 @@ class LightningDinoClassifier(L.LightningModule):
             self.model.parameters(), lr=self.learning_rate, **self.optimizer_kwargs
         )
 
-        scheduler = MultiStepLR(optimizer, **self.scheduler_kwargs)
+        # scheduler = MultiStepLR(optimizer, **self.scheduler_kwargs)
 
         # scheduler = ReduceLROnPlateau(
         #     optimizer, **self.scheduler_kwargs
         # )
         # "monitor": "train_loss"
-        # scheduler = OneCycleLR(optimizer, **self.scheduler_kwargs)
+        scheduler = OneCycleLR(optimizer, **self.scheduler_kwargs)
 
         return [optimizer], [
-            {"scheduler": scheduler, "interval": "epoch", "monitor": "train_loss"}
+            {"scheduler": scheduler, "interval": "step", "monitor": "train_loss"}
         ]
 
     def training_step(self, batch, batch_idx):
