@@ -24,6 +24,7 @@ strategy:
 training:
   backbone: dino
   finetune: False
+  stratify_initial_train: True
   include_param_loss: False
   batch_size: 100
   batch_size_prediction: 1500

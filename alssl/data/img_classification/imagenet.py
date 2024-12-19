@@ -37,8 +37,9 @@ def get_dataset(
 
     subset = subset if subset == "train" else "val"
 
+    ds = ImageNet(data_path, split=subset)
+
     if subset == "train":
-        ds = ImageNet(data_path, split=subset)
         all_ids = list(range(len(ds)))
         targets = ds.targets
 
@@ -46,9 +47,11 @@ def get_dataset(
                                                         test_size=0.1,
                                                         random_state=0,
                                                         stratify=targets)
-        return Subset(ds, new_ids), transform
+        ds_subset = Subset(ds, new_ids)
+        ds_subset.targets = new_ids_targets
+        return ds_subset, transform
 
-    return ImageNet(data_path, split=subset), transform
+    return ds, transform
 
 
 # def get_dataset(

@@ -36,6 +36,7 @@ class ALTrainer:
         budget_size: int,
         initial_train_size: int,
         initial_val_size: int,
+        stratify_initial_train: bool,
         n_iter: int,
         random_seed: int,
         config: dict,
@@ -57,6 +58,7 @@ class ALTrainer:
             budget_size: The number of new samples to select in each iteration.
             initial_train_size: Number of initial training samples.
             initial_val_size: Number of initial validation samples.
+            stratify_initial_train: If the initial sample is stratified or not.
             n_iter: Number of active learning iterations.
             random_seed: Random seed for reproducibility.
             finetune: Whether to finetune the model or reinitialize in each iteration.
@@ -82,6 +84,7 @@ class ALTrainer:
 
         self.initial_train_size = initial_train_size
         self.initial_val_size = initial_val_size
+        self.stratify_initial_train = stratify_initial_train
 
         self.finetune = finetune
         self.checkpoint_every_n_epochs = checkpoint_every_n_epochs
@@ -195,12 +198,13 @@ class ALTrainer:
         self.random_seed, rng = fix_seed(seed=self.random_seed)
 
         # Prepare training and validation sets
-        # TODO: stratify?
+        full_train_dataset = self.al_datamodule.full_train_dataset
         train_ids, val_ids = train_test_split(
-            np.arange(len(self.al_datamodule.full_train_dataset)),
+            np.arange(len(full_train_dataset)),
             train_size=self.initial_train_size,
             test_size=self.initial_val_size,
             random_state=self.random_seed,
+            stratify=full_train_dataset.targets if self.stratify_initial_train else None,
         )
 
         self.al_datamodule.set_train_ids(list(train_ids))

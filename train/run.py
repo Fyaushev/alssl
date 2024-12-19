@@ -73,10 +73,10 @@ def run_exp(config: DictConfig) -> None:
     print('config.strategy.initial_train_percent', config.strategy.initial_train_percent)
 
     exp_name = config.strategy.strategy_name + '_'.join([f'{k[:4]}-{v}' for k, v in config.strategy.strategy_params.items()])
-
+    exp_root_path = root_path / (str(config.strategy.initial_train_percent) + '_' + ('not_' if not config.training.stratify_initial_train else '') + 'stratify') / str(config.training.random_seed) / str(config.strategy.budget_percent)
     # Initialize the Active Learning trainer
     trainer = ALTrainer(
-        exp_root_path=root_path / str(config.strategy.initial_train_percent) / str(config.training.random_seed) / str(config.strategy.budget_percent),
+        exp_root_path=exp_root_path,
         exp_name=exp_name,
         al_strategy=partial(strategies[config.strategy.strategy_name], **config.strategy.strategy_params)(),
         al_datamodule=data_module,
@@ -85,6 +85,7 @@ def run_exp(config: DictConfig) -> None:
         budget_size=budget_size,
         initial_train_size=initial_train_size,
         initial_val_size=config.strategy.initial_val_size,
+        stratify_initial_train=config.training.stratify_initial_train,
         n_iter=config.strategy.n_iter,
         
         finetune=config.training.finetune,
