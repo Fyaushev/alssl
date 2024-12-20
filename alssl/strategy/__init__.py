@@ -1,7 +1,4 @@
 from .alssl.neighbours import NeighboursStrategy
-# from .alssl.neighbours_entropy import NeighboursEStrategy
-# from .alssl.neighbours_nms import NeighboursNMSStrategy
-# from .alssl.neighbours_path import NeighboursPathStrategy
 from .alssl.umaplike import UMAPLikeStrategy
 from .badge import BADGEStrategy
 from .bait import BAITStrategy
@@ -9,6 +6,8 @@ from .cal import CALStrategy
 from .cdal import CDALStrategy
 from .coreset import CoresetStrategy
 from .entropy import EntropyStrategy
+# from .alssl.neighbours_path import NeighboursPathStrategy
+from .golden_rule import GRStrategy
 from .random import RandomStrategy
 
 locals = locals()
