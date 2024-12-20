@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.special import softmax
 from sklearn.metrics import log_loss
 from torch import nn
 
@@ -22,4 +23,5 @@ class GRStrategy(BaseStrategy):
         return np.array(unlabeled_ids)[np.argsort(-scores)][:budget].tolist()
 
     def scoring_function(self, gt, pred, embeddings):
-        return log_loss(gt, pred)
+        proba = softmax(pred, -1)
+        return log_loss(gt.cpu(), proba, labels=np.arange(pred.shape[-1]))
