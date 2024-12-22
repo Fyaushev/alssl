@@ -11,6 +11,7 @@ from alssl.data.base import ALDataModule
 from alssl.model.base import BaseALModel
 from alssl.model.clip import LightningCLIPClassifier
 from alssl.model.dino import LightningDinoClassifier
+from alssl.model.effnet_b0 import LightningEffNetB0Classifier
 from alssl.strategy import strategies
 
 ALTrainer, BaseALModel, ALDataModule
@@ -49,6 +50,8 @@ def run_exp(config: DictConfig) -> None:
                 return LightningDinoClassifier
             elif config.training.backbone == 'clip':
                 return LightningCLIPClassifier
+            elif config.training.backbone == 'effnet_b0':
+                return LightningEffNetB0Classifier
         def get_hyperparameters(self):
             return {
                 'learning_rate':config.training.learning_rate,

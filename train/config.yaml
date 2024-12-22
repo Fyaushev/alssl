@@ -1,7 +1,7 @@
 experiment:
   exp_root_path:  /shared/experiments/active_learning/alssl/dn/
   data_path: /shared/projects/active_learning/
-  dataset: imagenet
+  dataset: bloodmnist
   wandb_entitiy: dnogina
 
 strategy:
@@ -9,20 +9,20 @@ strategy:
   strategy_params: #{}
     num_neighbours: 100
     metric: cosine
-    # fixed_budget: True
+    fixed_budget: True
     load_from_prev_iter: False
     finetune: False
-    # p_loss: False
-    nms: True
+    p_loss: False
+    nms: False
     comb_score: False
-    nms_e0: True
-  budget_percent: 0.5
+    nms_e0: False
+  budget_percent: 1
   initial_train_percent: 5
   initial_val_size: 5000
-  n_iter: 19
+  n_iter: 45
 
 training:
-  backbone: dino
+  backbone: effnet_b0
   finetune: False
   stratify_initial_train: True
   include_param_loss: False
@@ -30,8 +30,8 @@ training:
   batch_size_prediction: 1500
   num_epochs: 30
   learning_rate: 0.00001
-  random_seed: 3
-  num_workers: 1 #12
+  random_seed: 1
+  num_workers: 12
   check_val_every_n_epoch: 1
   optimizer_kwargs:
     weight_decay: 0.001
