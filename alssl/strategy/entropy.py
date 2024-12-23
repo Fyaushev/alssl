@@ -9,7 +9,7 @@ from .utils import predict
 
 
 class EntropyStrategy(BaseStrategy):
-    def __init__(self, random_proportion: float = .9, iter_weight: float = 0):
+    def __init__(self, random_proportion: float = 0, iter_weight: float = 0):
         self.random_proportion = random_proportion
         self.iter_weight = iter_weight
 

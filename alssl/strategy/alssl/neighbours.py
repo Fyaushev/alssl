@@ -43,7 +43,7 @@ def non_max_suppression(scores: np.ndarray, neighbors: np.ndarray, max_closeness
 
 class NeighboursStrategy(BaseStrategy):
     def __init__(self, num_neighbours, metric="minkowski", fixed_budget=True, load_from_prev_iter=True, 
-                 finetune=True, p_loss=False, nms=True, nms_e0=True, comb_score=True):
+                 finetune=True, p_loss=False, nms=True, nms_e0=True, comb_score=True, random_proportion: float = 0, iter_weight: float = 0):
         self.num_neighbours = num_neighbours + 1
         self.metric = metric
         self.fixed_budget = fixed_budget
@@ -54,6 +54,8 @@ class NeighboursStrategy(BaseStrategy):
         self.nms = nms
         self.nms_e0 = nms_e0
         self.comb_score = comb_score
+        self.random_proportion = random_proportion
+        self.iter_weight = iter_weight
 
     def _build_filename(self, prefix, short=True, ext="npy"):
         """Construct a dynamic filename based on strategy parameters."""
@@ -70,7 +72,7 @@ class NeighboursStrategy(BaseStrategy):
         options_str = "_".join(f"{k}={v}" for k, v in options.items() if v)
         return f"{prefix}.{ext}" if short else f"{prefix}_{options_str}.{ext}"
 
-    def select_ids(self, model: nn.Module, dataset: ALDataModule, budget: int, almodel: BaseALModel):
+    def select_ids(self, model: nn.Module, dataset: ALDataModule, budget: int, almodel: BaseALModel, iter_n: int):
         def compute_original_embeddings():
             prev_model = almodel.get_lightning_module()(**almodel.get_hyperparameters())
             if get_current_iteration() and self.load_from_prev_iter:
@@ -113,11 +115,20 @@ class NeighboursStrategy(BaseStrategy):
             np.save(self._build_filename("scores_combined", short=False), scores)
 
         unlabeled_ids = dataset.get_unlabeled_ids()
+        random_proportion = max(self.random_proportion - iter_n * self.iter_weight, 0)
+        budget_strategy = int(budget * (1-random_proportion))
+
         if self.nms:
             neighbors = neighbours_original_inds if self.nms_e0 else neighbours_finetuned_inds
-            nms_indices = non_max_suppression(-scores, neighbors, max_boxes=budget)
-            return np.array(unlabeled_ids)[nms_indices].tolist()
+            nms_indices = non_max_suppression(-scores, neighbors, max_boxes=budget_strategy)
+            strategy_selected_ids = np.array(unlabeled_ids)[nms_indices].tolist()
+        else:
+            sorting = np.argsort(scores)
+            mask = np.ones_like(sorting, dtype=bool) if self.fixed_budget else scores[sorting] < self.nn_thr
+            strategy_selected_ids = np.array(unlabeled_ids)[sorting][mask][:budget_strategy].tolist()
 
-        sorting = np.argsort(scores)
-        mask = np.ones_like(sorting, dtype=bool) if self.fixed_budget else scores[sorting] < self.nn_thr
-        return np.array(unlabeled_ids)[sorting][mask][:budget].tolist()
+        unselected_ids = list(set(unlabeled_ids) ^ set(strategy_selected_ids))
+        random_selected_ids = np.random.choice(unselected_ids, size=int(budget * random_proportion), replace=False).tolist()
+        
+        return strategy_selected_ids + random_selected_ids
+        
