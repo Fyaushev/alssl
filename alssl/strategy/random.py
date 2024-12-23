@@ -13,7 +13,7 @@ class RandomStrategy(BaseStrategy):
     from the dataset to be labeled next, based on the given budget.
     """
 
-    def select_ids(self, model: nn.Module, dataset: ALDataModule, budget: int, **kwargs):
+    def select_ids(self, model: nn.Module, dataset: ALDataModule, budget: int, almodel, iter_n: int):
         return np.random.choice(
             dataset.get_unlabeled_ids(), size=budget, replace=False
         ).tolist()
