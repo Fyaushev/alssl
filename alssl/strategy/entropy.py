@@ -13,7 +13,7 @@ class EntropyStrategy(BaseStrategy):
         self.random_proportion = random_proportion
         self.iter_weight = iter_weight
 
-    def select_ids(self, model: nn.Module, dataset: ALDataModule, budget: int, iter_n: int):
+    def select_ids(self, model: nn.Module, dataset: ALDataModule, budget: int, al_model, iter_n: int):
         
         unlabeled_dataset = dataset.unlabeled_dataloader()
         
