@@ -1,4 +1,5 @@
 from .alssl.neighbours import NeighboursStrategy
+from .alssl.randomized_entropy import RandEntropyStrategy
 from .alssl.umaplike import UMAPLikeStrategy
 from .badge import BADGEStrategy
 from .bait import BAITStrategy
