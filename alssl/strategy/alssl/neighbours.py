@@ -43,7 +43,7 @@ def non_max_suppression(scores: np.ndarray, neighbors: np.ndarray, max_closeness
 
 class NeighboursStrategy(BaseStrategy):
     def __init__(self, num_neighbours, metric="minkowski", fixed_budget=True, load_from_prev_iter=True, 
-                 finetune=True, p_loss=False, nms=True, nms_e0=True, comb_score=True, random_proportion: float = 0, iter_weight: float = 0):
+                 finetune=True, p_loss=False, nms=True, nms_e0=True, comb_score=True, random_proportion: float = 0, iter_weight: float = 0, comb_score_quant: bool = False):
         self.num_neighbours = num_neighbours + 1
         self.metric = metric
         self.fixed_budget = fixed_budget
@@ -56,6 +56,7 @@ class NeighboursStrategy(BaseStrategy):
         self.comb_score = comb_score
         self.random_proportion = random_proportion
         self.iter_weight = iter_weight
+        self.comb_score_quant = comb_score_quant
 
     def _build_filename(self, prefix, short=True, ext="npy"):
         """Construct a dynamic filename based on strategy parameters."""
@@ -122,13 +123,22 @@ class NeighboursStrategy(BaseStrategy):
             neighbors = neighbours_original_inds if self.nms_e0 else neighbours_finetuned_inds
             nms_indices = non_max_suppression(-scores, neighbors, max_boxes=budget_strategy)
             strategy_selected_ids = np.array(unlabeled_ids)[nms_indices].tolist()
+        elif self.comb_score_quant:
+            quant = .95
+            entropy_quantile = np.quantile(entropy_scores, quant)
+            neigh_low, neigh_high = np.quantile(scores[entropy_scores > entropy_quantile], [1 - quant, quant])
+            strategy_selected_ids = np.array(unlabeled_ids)[(scores < neigh_low) & (entropy_scores > entropy_quantile) | (scores > neigh_high) & (entropy_scores > entropy_quantile)][:budget_strategy].tolist()
         else:
             sorting = np.argsort(scores)
             mask = np.ones_like(sorting, dtype=bool) if self.fixed_budget else scores[sorting] < self.nn_thr
             strategy_selected_ids = np.array(unlabeled_ids)[sorting][mask][:budget_strategy].tolist()
 
         unselected_ids = list(set(unlabeled_ids) ^ set(strategy_selected_ids))
-        random_selected_ids = np.random.choice(unselected_ids, size=int(budget * random_proportion), replace=False).tolist()
+
+        if self.comb_score_quant:
+            random_selected_ids = np.random.choice(unselected_ids, size=int(budget - len(strategy_selected_ids)), replace=False).tolist()
+        else:
+            random_selected_ids = np.random.choice(unselected_ids, size=int(budget * random_proportion), replace=False).tolist()
         
         return strategy_selected_ids + random_selected_ids
         
