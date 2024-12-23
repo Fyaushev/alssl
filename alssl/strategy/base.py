@@ -8,5 +8,5 @@ from ..model.base import BaseALModel
 
 class BaseStrategy(ABC):
     @abstractmethod
-    def select_ids(self, model: nn.Module, dataset: ALDataModule, budget: int, almodel: BaseALModel) -> list:
+    def select_ids(self, model: nn.Module, dataset: ALDataModule, budget: int, almodel: BaseALModel, **kwargs) -> list:
         pass

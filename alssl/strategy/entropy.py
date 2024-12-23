@@ -9,10 +9,11 @@ from .utils import predict
 
 
 class EntropyStrategy(BaseStrategy):
-    def __init__(self, random_proportion: float = .9):
+    def __init__(self, random_proportion: float = .9, iter_weight: float = 0):
         self.random_proportion = random_proportion
+        self.iter_weight = iter_weight
 
-    def select_ids(self, model: nn.Module, dataset: ALDataModule, budget: int, _):
+    def select_ids(self, model: nn.Module, dataset: ALDataModule, budget: int, iter_n: int):
         
         unlabeled_dataset = dataset.unlabeled_dataloader()
         
@@ -24,11 +25,13 @@ class EntropyStrategy(BaseStrategy):
 
         unlabeled_ids = dataset.get_unlabeled_ids()
 
-        entropy_selected_ids = np.array(unlabeled_ids)[np.argsort(scores)][:int(budget * (1-self.random_proportion))].tolist()
+        random_proportion = max(self.random_proportion - iter_n * self.iter_weight, 0)
+
+        entropy_selected_ids = np.array(unlabeled_ids)[np.argsort(scores)][:int(budget * (1-random_proportion))].tolist()
 
         unselected_ids = list(set(unlabeled_ids) ^ set(entropy_selected_ids))
 
-        random_selected_ids = np.random.choice(unselected_ids, size=int(budget * self.random_proportion), replace=False).tolist()
+        random_selected_ids = np.random.choice(unselected_ids, size=int(budget * random_proportion), replace=False).tolist()
 
         return entropy_selected_ids + random_selected_ids
 

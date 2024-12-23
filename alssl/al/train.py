@@ -234,7 +234,7 @@ class ALTrainer:
                 continue
             
             active_learning_id = self.al_strategy.select_ids(
-                model, self.al_datamodule, self.budget_size, self.al_model
+                model, self.al_datamodule, self.budget_size, self.al_model, i
             )
             self.al_datamodule.update_train_ids(active_learning_id)
             if i > 0:
