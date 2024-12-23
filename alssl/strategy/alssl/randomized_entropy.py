@@ -15,6 +15,12 @@ def entropy(pred):
 
 
 class RandEntropyStrategy(BaseStrategy):
+
+    def __init__(self, num_neighbours, metric="cosine"):
+        self.num_neighbours = num_neighbours + 1
+        self.metric = metric
+
+
     def select_ids(self, model: nn.Module, dataset: ALDataModule, budget: int, al_model, iter_n: int):
 
         e1, neighbors, pred = get_neighbours(
