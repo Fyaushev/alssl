@@ -53,6 +53,8 @@ def load_or_compute(filepaths, compute_fn, to_save:bool = False, *args, **kwargs
     # Compute data and save to all files
     results = compute_fn(*args, **kwargs)
     if to_save:
+        if len(filepaths) == 1:
+            np.save(filepaths[0], results)
         for fp, result in zip(filepaths, results):
             np.save(fp, result)
     return results
