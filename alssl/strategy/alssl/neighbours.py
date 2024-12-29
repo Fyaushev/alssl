@@ -42,14 +42,13 @@ def non_max_suppression(scores: np.ndarray, neighbors: np.ndarray, max_closeness
 
 
 class NeighboursStrategy(BaseStrategy):
-    def __init__(self, num_neighbours, metric="minkowski", fixed_budget=True, load_from_prev_iter=True, 
-                 finetune=True, p_loss=False, nms=True, nms_e0=True, comb_score=True, random_proportion: float = 0, iter_weight: float = 0, comb_score_quant: bool = False):
+    def __init__(self, num_neighbours, metric="minkowski", fixed_budget=True, load_from_prev_iter=True, nn_thr = None,
+                p_loss=False, nms=True, nms_e0=True, comb_score=True, random_proportion: float = 0, iter_weight: float = 0, comb_score_quant: bool = False):
         self.num_neighbours = num_neighbours + 1
         self.metric = metric
         self.fixed_budget = fixed_budget
-        self.nn_thr = int(num_neighbours * 0.2)
+        self.nn_thr = nn_thr
         self.load_from_prev_iter = load_from_prev_iter
-        self.finetune = finetune
         self.include_param_loss = p_loss
         self.nms = nms
         self.nms_e0 = nms_e0
@@ -64,7 +63,7 @@ class NeighboursStrategy(BaseStrategy):
             "num_neighbours": self.num_neighbours,
             "metric": self.metric,
             # "fixed_budget": self.fixed_budget,
-            "finetune": self.finetune,
+            # "finetune": self.finetune,
             "p_loss": self.include_param_loss,
             # "nms": self.nms,
             # "nms_e0": self.nms_e0,
