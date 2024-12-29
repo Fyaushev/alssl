@@ -5,39 +5,27 @@ experiment:
   wandb_entitiy: dnogina
 
 strategy:
-  strategy_name: NeighboursStrategy #NeighboursEStrategy
-  strategy_params: #{}
-    num_neighbours: 100
-    metric: cosine
-    fixed_budget: True
-    load_from_prev_iter: False
-    finetune: False
-    p_loss: False
-    nms: False
-    comb_score: False
-    nms_e0: False
+  strategy_name: RandomStrategy
+  strategy_params: {}
   budget_percent: 1
-  initial_train_percent: 5
-  initial_val_size: 5000
-  n_iter: 45
+  initial_train_percent: 1
+  initial_val_size: 1000
+  n_iter: 2
+
+coldstart:
+  coldstart_name: RandomColdStart
+  coldstart_params: {}
 
 training:
   backbone: effnet_b0
   finetune: False
-  stratify_initial_train: True
   include_param_loss: False
   batch_size: 100
   batch_size_prediction: 1500
-  num_epochs: 30
-  learning_rate: 0.00001
+  num_epochs: 100
+  learning_rate: 0.0001
   random_seed: 1
   num_workers: 12
   check_val_every_n_epoch: 1
   optimizer_kwargs:
     weight_decay: 0.001
-  scheduler_kwargs:
-    max_lr: 0.00001
-    epochs: 30
-    steps_per_epoch: 100
-    # milestones:
-    #   - 20

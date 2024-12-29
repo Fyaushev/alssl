@@ -4,9 +4,10 @@ from functools import partial
 from pathlib import Path
 
 import hydra
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig, OmegaConf, open_dict
 
 from alssl.al.train import ALTrainer
+from alssl.coldstart import coldstarts
 from alssl.data.base import ALDataModule
 from alssl.model.base import BaseALModel
 from alssl.model.clip import LightningCLIPClassifier
@@ -44,6 +45,12 @@ def run_exp(config: DictConfig) -> None:
     # MODEL
     num_classes = ds_utils.get_num_classes()
 
+    scheduler_kwargs = {
+        "max_lr": config.training.learning_rate,
+        "epochs": config.training.num_epochs,
+        "steps_per_epoch": 10, # depends on the size of training loader and is set in train.py
+    }
+    
     class Model(BaseALModel):
         def get_lightning_module(self):
             if config.training.backbone == 'dino':
@@ -57,7 +64,7 @@ def run_exp(config: DictConfig) -> None:
                 'learning_rate':config.training.learning_rate,
                 'num_classes':num_classes,
                 'optimizer_kwargs':config.training.optimizer_kwargs,
-                'scheduler_kwargs':config.training.scheduler_kwargs,
+                'scheduler_kwargs':scheduler_kwargs,
                 'include_param_loss':config.training.include_param_loss,
             }
 
@@ -75,26 +82,34 @@ def run_exp(config: DictConfig) -> None:
     print('config.strategy.budget_percent', config.strategy.budget_percent)
     print('config.strategy.initial_train_percent', config.strategy.initial_train_percent)
 
-    exp_name = config.strategy.strategy_name + '_'.join([f'{k[:4]}-{v}' for k, v in config.strategy.strategy_params.items()])
-    exp_root_path = root_path / (str(config.strategy.initial_train_percent) + '_' + ('not_' if not config.training.stratify_initial_train else '') + 'stratify') / str(config.training.random_seed) / str(config.strategy.budget_percent)
+    exp_name = config.strategy.strategy_name + '_' + '_'.join([f'{k[:4]}-{v}' for k, v in config.strategy.strategy_params.items()])
+    coldstart_name = config.coldstart.coldstart_name + '_' + '_'.join([f'{k}-{v}' for k, v in config.coldstart.coldstart_params.items()])
+    exp_root_path = root_path / (str(config.strategy.initial_train_percent) + '_' + coldstart_name) / str(config.training.random_seed) / str(config.strategy.budget_percent)
+    
+    with open_dict(config):
+        config.coldstart.coldstart_params.initial_train_size = initial_train_size
+        config.coldstart.coldstart_params.random_seed = config.training.random_seed
+        config.coldstart.coldstart_params.num_classes = num_classes
+    
     # Initialize the Active Learning trainer
     trainer = ALTrainer(
         exp_root_path=exp_root_path,
         exp_name=exp_name,
         al_strategy=partial(strategies[config.strategy.strategy_name], **config.strategy.strategy_params)(),
+        al_coldstart=partial(coldstarts[config.coldstart.coldstart_name], **config.coldstart.coldstart_params)(),
         al_datamodule=data_module,
         al_model=model,
         
         budget_size=budget_size,
         initial_train_size=initial_train_size,
         initial_val_size=config.strategy.initial_val_size,
-        stratify_initial_train=config.training.stratify_initial_train,
         n_iter=config.strategy.n_iter,
         
         finetune=config.training.finetune,
         random_seed=config.training.random_seed,
         num_epochs=config.training.num_epochs,
         checkpoint_every_n_epochs=config.training.num_epochs,
+        check_val_every_n_epoch=config.training.check_val_every_n_epoch,
         config=OmegaConf.to_container(config),
         entitiy=config.experiment.wandb_entitiy
     )

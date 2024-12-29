@@ -11,6 +11,7 @@ from lightning.pytorch.loggers import WandbLogger
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
+from ..coldstart.base import BaseColdStart
 from ..data.base import ALDataModule
 from ..model.base import BaseALModel
 from ..strategy.base import BaseStrategy
@@ -31,12 +32,12 @@ class ALTrainer:
         exp_root_path: Path,
         exp_name: Path,
         al_strategy: BaseStrategy,
+        al_coldstart: BaseColdStart,
         al_datamodule: ALDataModule,
         al_model: BaseALModel,
         budget_size: int,
         initial_train_size: int,
         initial_val_size: int,
-        stratify_initial_train: bool,
         n_iter: int,
         random_seed: int,
         config: dict,
@@ -53,12 +54,12 @@ class ALTrainer:
             exp_root_path: Path to the root directory for experiment logs.
             exp_name: Name of the experiment.
             al_strategy: The active learning strategy to use.
+            al_coldstart: The strategy of initial train selection.
             al_datamodule: The data module for active learning.
             al_model: The model to be trained.
             budget_size: The number of new samples to select in each iteration.
             initial_train_size: Number of initial training samples.
             initial_val_size: Number of initial validation samples.
-            stratify_initial_train: If the initial sample is stratified or not.
             n_iter: Number of active learning iterations.
             random_seed: Random seed for reproducibility.
             finetune: Whether to finetune the model or reinitialize in each iteration.
@@ -77,6 +78,7 @@ class ALTrainer:
 
         self.random_seed = random_seed
         self.al_strategy = al_strategy
+        self.al_coldstart = al_coldstart
         self.al_datamodule = al_datamodule
         self.al_model = al_model
         self.budget_size = budget_size
@@ -84,7 +86,6 @@ class ALTrainer:
 
         self.initial_train_size = initial_train_size
         self.initial_val_size = initial_val_size
-        self.stratify_initial_train = stratify_initial_train
 
         self.finetune = finetune
         self.checkpoint_every_n_epochs = checkpoint_every_n_epochs
@@ -154,6 +155,12 @@ class ALTrainer:
         self.log_summary(i, test_metrics)
         return module
     
+    def _get_lightning_module(self, len_train_dataloader):
+        module = self.al_model.get_lightning_module()
+        hyperparams = self.al_model.get_hyperparameters()
+        hyperparams['scheduler_kwargs']['steps_per_epoch'] = len_train_dataloader
+        return module, hyperparams
+    
     def load_model(self, curr_dir, prev_dir, iteration, len_train_dataloader):
         """
         Each active learning iteration is a finetuning of the previous model or training from scratch.
@@ -176,9 +183,7 @@ class ALTrainer:
             print('set train ids, train_ids_path', train_ids_path)
             self.al_datamodule.set_train_ids(load(train_ids_path))
 
-        module = self.al_model.get_lightning_module()
-        hyperparams = self.al_model.get_hyperparameters()
-        hyperparams['scheduler_kwargs']['steps_per_epoch'] = len_train_dataloader
+        module, hyperparams = self._get_lightning_module(len_train_dataloader)
         
         if checkpoint_path is None:
             print('do NOT load checkpoint')
@@ -199,16 +204,21 @@ class ALTrainer:
 
         # Prepare training and validation sets
         full_train_dataset = self.al_datamodule.full_train_dataset
-        train_ids, val_ids = train_test_split(
+
+        # take validation set with stratification
+        all_train_ids, val_ids = train_test_split(
             np.arange(len(full_train_dataset)),
-            train_size=self.initial_train_size,
             test_size=self.initial_val_size,
             random_state=self.random_seed,
-            stratify=full_train_dataset.targets if self.stratify_initial_train else None,
+            stratify=full_train_dataset.targets,
         )
+        self.al_datamodule.set_val_ids(list(val_ids))
+
+        # select initial train ids according to coldstart strategy
+        module, hyperparams = self._get_lightning_module(len(all_train_ids))
+        train_ids = self.al_coldstart.select_ids(module(**hyperparams), self.al_datamodule)
 
         self.al_datamodule.set_train_ids(list(train_ids))
-        self.al_datamodule.set_val_ids(list(val_ids))
 
         zero_iteration_dir = self.exp_path.parent.parent / 'zero_iteration'
 
