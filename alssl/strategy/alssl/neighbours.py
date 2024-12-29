@@ -63,12 +63,12 @@ class NeighboursStrategy(BaseStrategy):
         options = {
             "num_neighbours": self.num_neighbours,
             "metric": self.metric,
-            "fixed_budget": self.fixed_budget,
+            # "fixed_budget": self.fixed_budget,
             "finetune": self.finetune,
             "p_loss": self.include_param_loss,
-            "nms": self.nms,
-            "nms_e0": self.nms_e0,
-            "comb_score": self.comb_score,
+            # "nms": self.nms,
+            # "nms_e0": self.nms_e0,
+            # "comb_score": self.comb_score,
         }
         options_str = "_".join(f"{k}={v}" for k, v in options.items() if v)
         return f"{prefix}.{ext}" if short else f"{prefix}_{options_str}.{ext}"
@@ -124,10 +124,11 @@ class NeighboursStrategy(BaseStrategy):
             nms_indices = non_max_suppression(-scores, neighbors, max_boxes=budget_strategy)
             strategy_selected_ids = np.array(unlabeled_ids)[nms_indices].tolist()
         elif self.comb_score_quant:
-            quant = .95
+            quant = .9
             entropy_quantile = np.quantile(entropy_scores, quant)
             neigh_low, neigh_high = np.quantile(scores[entropy_scores > entropy_quantile], [1 - quant, quant])
-            strategy_selected_ids = np.array(unlabeled_ids)[(scores < neigh_low) & (entropy_scores > entropy_quantile) | (scores > neigh_high) & (entropy_scores > entropy_quantile)][:budget_strategy].tolist()
+            strategy_selected_ids = np.array(unlabeled_ids)[(scores < neigh_low) & (entropy_scores > entropy_quantile)][:budget_strategy].tolist()
+            # strategy_selected_ids = np.array(unlabeled_ids)[(scores < neigh_low) & (entropy_scores > entropy_quantile) | (scores > neigh_high) & (entropy_scores > entropy_quantile)][:budget_strategy].tolist()
         else:
             sorting = np.argsort(scores)
             mask = np.ones_like(sorting, dtype=bool) if self.fixed_budget else scores[sorting] < self.nn_thr

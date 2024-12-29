@@ -34,7 +34,7 @@ def get_previous_interation_state_dict():
     return torch.load(last_checkpoint(previous_iteration_dir))["state_dict"]
 
 
-def load_or_compute(filepaths, compute_fn, *args, **kwargs):
+def load_or_compute(filepaths, compute_fn, to_save:bool = False, *args, **kwargs):
     """
     Load data from multiple files if they all exist, otherwise compute and save.
     
@@ -50,8 +50,9 @@ def load_or_compute(filepaths, compute_fn, *args, **kwargs):
     
     # Compute data and save to all files
     results = compute_fn(*args, **kwargs)
-    for fp, result in zip(filepaths, results):
-        np.save(fp, result)
+    if to_save:
+        for fp, result in zip(filepaths, results):
+            np.save(fp, result)
     return results
 
 

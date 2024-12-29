@@ -40,6 +40,8 @@ class EffNetB0Classifier(nn.Module):
                 print(f'Unfreeze block {name}')
                 for params in child.parameters():
                     params.requires_grad = True
+        
+        self.classifier.requires_grad = True
 
     def forward(self, x):
         embeddings = self.backbone(x)
