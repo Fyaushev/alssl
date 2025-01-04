@@ -11,14 +11,14 @@ from .utils import predict
 
 
 class CDALStrategy(BaseStrategy):
-    def select_ids(self, model: nn.Module, dataset: ALDataModule, budget: int, _):
+    def select_ids(self, model: nn.Module, dataset: ALDataModule, budget: int, *args):
         _, y_preds_unlabeled, _ = predict(
-            model.get_lightning_module(), 
+            model, 
             dataset.unlabeled_dataloader(), 
             scoring="none", desc='unlabeled')
         
         _, y_preds_train, _ = predict(
-            model.get_lightning_module(), 
+            model, 
             dataset.train_dataloader(), 
             scoring="none", desc='train')
         

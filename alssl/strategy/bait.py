@@ -53,11 +53,11 @@ class BAITStrategy(BaseStrategy):
     assumes cross-entropy loss
     '''
 
-    def __init__(self, num_classes: int, prefilter_beta: Optional[int]=10):
+    def __init__(self, num_classes: int, prefilter_beta: Optional[int]=None):
         self.num_classes = num_classes
         self.prefilter_beta = prefilter_beta
 
-    def select_ids(self, model: nn.Module, dataset: ALDataModule, budget: int, _):
+    def select_ids(self, model: nn.Module, dataset: ALDataModule, budget: int, *args):
 
         ys_unlabeled, ys_unlabeled_pred, embeddings_unlabeled = predict(
             model,
@@ -87,9 +87,9 @@ class BAITStrategy(BaseStrategy):
 
         if self.prefilter_beta is not None:
             top_k_entropy = np.argsort(entropy_scores)[:budget * self.prefilter_beta]
-            fisher_embedding = fisher_embedding[top_k_entropy, :]
+            fisher_embedding = fisher_embedding[:, top_k_entropy, :]
         
         chosen_idxs = init_centers(fisher_embedding, budget)
         unlabeled_ids = dataset.get_unlabeled_ids()
         
-        return np.array(unlabeled_ids)[chosen_idxs.astype(int)].tolist()
+        return np.array(unlabeled_ids)[np.array(chosen_idxs).astype(int)].tolist()

@@ -57,7 +57,7 @@ class BADGEStrategy(BaseStrategy):
         self.num_classes = num_classes
         self.prefilter_beta = prefilter_beta
 
-    def select_ids(self, model: nn.Module, dataset: ALDataModule, budget: int, _):
+    def select_ids(self, model: nn.Module, dataset: ALDataModule, budget: int, *args):
 
         ys_unlabeled, ys_unlabeled_pred, embeddings_unlabeled = predict(
             model,

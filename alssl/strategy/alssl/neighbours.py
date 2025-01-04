@@ -42,8 +42,8 @@ def non_max_suppression(scores: np.ndarray, neighbors: np.ndarray, max_closeness
 
 
 class NeighboursStrategy(BaseStrategy):
-    def __init__(self, num_neighbours, metric="minkowski", fixed_budget=True, load_from_prev_iter=True, nn_thr = None,
-                p_loss=False, nms=True, nms_e0=True, comb_score=True, random_proportion: float = 0, iter_weight: float = 0, comb_score_quant: bool = False):
+    def __init__(self, num_neighbours, metric="cosine", fixed_budget=True, load_from_prev_iter=True, nn_thr = None,
+                p_loss=False, nms=True, nms_e0=True, comb_score=False, random_proportion: float = 0, iter_weight: float = 0, comb_score_quant: bool = False):
         self.num_neighbours = num_neighbours + 1
         self.metric = metric
         self.fixed_budget = fixed_budget
@@ -115,6 +115,23 @@ class NeighboursStrategy(BaseStrategy):
             np.save(self._build_filename("scores_combined", short=False), scores)
 
         unlabeled_ids = dataset.get_unlabeled_ids()
+        sorting = np.argsort(scores)
+        mask = scores[sorting] < self.nn_thr
+        # assert False, f'{mask.sum()}'
+        print('Zero nn:', mask.sum())
+
+        unlabeled_ids = np.array(unlabeled_ids)[sorting][mask]
+        scores = scores[sorting][mask]
+
+        if self.nms:
+            neighbors = neighbours_original_inds if self.nms_e0 else neighbours_finetuned_inds
+            neighbors = neighbors[sorting][mask]
+            nms_indices = non_max_suppression(-scores, neighbors, max_boxes=budget)
+            assert len(nms_indices)
+            return unlabeled_ids[nms_indices].tolist()
+
+        return unlabeled_ids[:budget].tolist()
+        return strategy_selected_ids
         random_proportion = max(self.random_proportion - iter_n * self.iter_weight, 0)
         budget_strategy = int(budget * (1-random_proportion))
 
@@ -137,7 +154,7 @@ class NeighboursStrategy(BaseStrategy):
 
         if self.comb_score_quant:
             random_selected_ids = np.random.choice(unselected_ids, size=int(budget - len(strategy_selected_ids)), replace=False).tolist()
-        else:
+        elif self.fixed_budget:
             random_selected_ids = np.random.choice(unselected_ids, size=int(budget * random_proportion), replace=False).tolist()
         
         return strategy_selected_ids + random_selected_ids

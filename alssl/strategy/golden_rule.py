@@ -13,7 +13,7 @@ class GRStrategy(BaseStrategy):
     def __init__(self, inverse: bool = False):
         self.inverse = inverse
     
-    def select_ids(self, model: nn.Module, dataset: ALDataModule, budget: int, _):
+    def select_ids(self, model: nn.Module, dataset: ALDataModule, budget: int, *args):
         
         unlabeled_dataset = dataset.unlabeled_dataloader()
         

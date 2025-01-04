@@ -19,7 +19,7 @@ class CALStrategy(BaseStrategy):
     def __init__(self, num_neighbours: int):
         self.num_neighbours = num_neighbours
 
-    def select_ids(self, model: nn.Module, dataset: ALDataModule, budget: int, _):
+    def select_ids(self, model: nn.Module, dataset: ALDataModule, budget: int, *args):
 
         ys_unlabeled, ys_unlabeled_pred, embeddings_unlabeled = predict(
             model,
