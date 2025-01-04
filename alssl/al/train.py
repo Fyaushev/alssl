@@ -209,7 +209,7 @@ class ALTrainer:
         all_train_ids, val_ids = train_test_split(
             np.arange(len(full_train_dataset)),
             test_size=self.initial_val_size,
-            random_state=self.random_seed,
+            random_state=0, # validation is constant
             stratify=full_train_dataset.targets,
         )
         self.al_datamodule.set_val_ids(list(val_ids))
