@@ -15,6 +15,7 @@ from ..coldstart.base import BaseColdStart
 from ..data.base import ALDataModule
 from ..model.base import BaseALModel
 from ..strategy.base import BaseStrategy
+from .optuna import run_optuna
 from .utils import efficient_chdir, fix_seed, get_checkpoint, last_checkpoint
 
 # clear output
@@ -43,6 +44,7 @@ class ALTrainer:
         config: dict,
         *,
         finetune=True,
+        optuna_trials: int = 0,
         project_name="alssl",
         checkpoint_every_n_epochs=50,
         num_epochs=101,
@@ -88,6 +90,7 @@ class ALTrainer:
         self.initial_val_size = initial_val_size
 
         self.finetune = finetune
+        self.optuna_trials = optuna_trials
         self.checkpoint_every_n_epochs = checkpoint_every_n_epochs
         self.check_val_every_n_epoch = check_val_every_n_epoch
         self.num_epochs = num_epochs
@@ -187,21 +190,18 @@ class ALTrainer:
         
         if checkpoint_path is None:
             print('do NOT load checkpoint')
+            if self.optuna_trials > 0:
+                print(f'run optuna for {self.optuna_trials} times')
+                best_learning_rate = run_optuna(self, len_train_dataloader, self.optuna_trials)
+                hyperparams["learning_rate"] = best_learning_rate
             model = module(**hyperparams)
         else:
             print('DO load checkpoint')
             model = module.load_from_checkpoint(checkpoint_path, **hyperparams)
         print(checkpoint_path)
         return model, is_fully_trained
-
-    def run(self):
-        """
-        Runs the active learning training loop.
-        """
-
-        # Set random seed for reproducibility
-        self.random_seed, rng = fix_seed(seed=self.random_seed)
-
+    
+    def setup_datamodule(self):
         # Prepare training and validation sets
         full_train_dataset = self.al_datamodule.full_train_dataset
 
@@ -219,6 +219,16 @@ class ALTrainer:
         train_ids = self.al_coldstart.select_ids(module(**hyperparams), self.al_datamodule)
 
         self.al_datamodule.set_train_ids(list(train_ids))
+
+    def run(self):
+        """
+        Runs the active learning training loop.
+        """
+
+        # Set random seed for reproducibility
+        self.random_seed, rng = fix_seed(seed=self.random_seed)
+        # TODO: it is run each time including coldstart, but further iteration can be already calculated. They are checked in the cycle
+        self.setup_datamodule()
 
         zero_iteration_dir = self.exp_path.parent.parent / 'zero_iteration'
 

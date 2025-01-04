@@ -3,7 +3,7 @@ import timm
 import torch
 from torch import nn
 from torch.optim.lr_scheduler import MultiStepLR, OneCycleLR, ReduceLROnPlateau
-from torchmetrics.functional import accuracy
+from torchmetrics.functional import accuracy, average_precision
 from torchmetrics.segmentation import MeanIoU
 from torchvision.models import efficientnet_b0
 from transformers import AutoModel
@@ -88,6 +88,7 @@ class LightningEffNetB0Classifier(L.LightningModule):
         #     optimizer, **self.scheduler_kwargs
         # )
         # "monitor": "train_loss"
+        self.scheduler_kwargs["max_lr"] = self.learning_rate
         scheduler = OneCycleLR(optimizer, **self.scheduler_kwargs)
 
         return [optimizer], [
@@ -110,9 +111,11 @@ class LightningEffNetB0Classifier(L.LightningModule):
             self.log("param_loss", param_loss, prog_bar=True, on_epoch=True, on_step=False)
 
         acc = self._calculate_accuracy(logits, labels)
+        auprc = self._calculate_average_precision(logits, labels)
 
         self.log("train_loss", loss, prog_bar=True, on_epoch=True, on_step=False)
         self.log("train_acc", acc, prog_bar=True, on_epoch=True, on_step=False)
+        self.log("train_auprc", auprc, prog_bar=True, on_epoch=True, on_step=False)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -121,9 +124,11 @@ class LightningEffNetB0Classifier(L.LightningModule):
 
         loss = self.criterion(logits, labels)
         acc = self._calculate_accuracy(logits, labels)
+        auprc = self._calculate_average_precision(logits, labels)
 
         self.log("val_loss", loss, prog_bar=True, on_epoch=True, on_step=False)
         self.log("val_acc", acc, prog_bar=True, on_epoch=True, on_step=False)
+        self.log("val_auprc", auprc, prog_bar=True, on_epoch=True, on_step=False)
         return loss
 
     def test_step(self, batch, batch_idx):
@@ -131,11 +136,21 @@ class LightningEffNetB0Classifier(L.LightningModule):
         logits, embeddings = self(images)
 
         acc = self._calculate_accuracy(logits, labels)
+        auprc = self._calculate_average_precision(logits, labels)
         self.log("test_acc", acc, on_epoch=True, on_step=False)
+        self.log("test_auprc", auprc, on_epoch=True, on_step=False)
 
     def _calculate_accuracy(self, logits, labels):
         return accuracy(
             torch.argmax(logits, dim=1),
+            labels,
+            task="multiclass",
+            num_classes=self.num_classes,
+        )
+    
+    def _calculate_average_precision(self, logits, labels):
+        return average_precision(
+            logits,
             labels,
             task="multiclass",
             num_classes=self.num_classes,

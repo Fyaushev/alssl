@@ -45,10 +45,11 @@ def load_or_compute(filepaths, compute_fn, to_save:bool = False, *args, **kwargs
     Returns:
         list of np.ndarray: Loaded or computed data.
     """
-    if all(Path(fp).exists() for fp in filepaths):
-        if len(filepaths) == 1:
-            return np.load(filepaths[0])
-        return [np.load(fp) for fp in filepaths]
+    # TODO: fix
+    # if all(Path(fp).exists() for fp in filepaths):
+    #     if len(filepaths) == 1:
+    #         return np.load(filepaths[0])
+    #     return [np.load(fp) for fp in filepaths]
     
     # Compute data and save to all files
     results = compute_fn(*args, **kwargs)

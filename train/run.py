@@ -106,6 +106,7 @@ def run_exp(config: DictConfig) -> None:
         n_iter=config.strategy.n_iter,
         
         finetune=config.training.finetune,
+        optuna_trials=config.training.optuna_trials,
         random_seed=config.training.random_seed,
         num_epochs=config.training.num_epochs,
         checkpoint_every_n_epochs=config.training.num_epochs,
