@@ -111,14 +111,18 @@ class NeighboursStrategy(BaseStrategy):
         np.save(self._build_filename("scores", short=False), scores)
 
         if self.comb_score:
-            scores = -(entropy_scores / entropy_scores.max()) * (1 - scores / scores.max())
+            mean_of_nn_scores = []
+            for orig_nns in neighbours_original_inds:
+                mean_of_nn_scores.append(scores[orig_nns].mean())
+            mean_of_nn_scores = np.array(mean_of_nn_scores)
+
+            scores = scores / (mean_of_nn_scores + 1e-10)
+            # scores = -(entropy_scores / entropy_scores.max()) * (1 - scores / scores.max())
             np.save(self._build_filename("scores_combined", short=False), scores)
 
         unlabeled_ids = dataset.get_unlabeled_ids()
         sorting = np.argsort(scores)
-        mask = scores[sorting] < self.nn_thr
-        # assert False, f'{mask.sum()}'
-        print('Zero nn:', mask.sum())
+        mask = np.ones_like(sorting, dtype=bool) if self.nn_thr is None else scores[sorting] < self.nn_thr
 
         unlabeled_ids = np.array(unlabeled_ids)[sorting][mask]
         scores = scores[sorting][mask]
