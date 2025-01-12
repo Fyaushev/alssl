@@ -42,10 +42,11 @@ def non_max_suppression(scores: np.ndarray, neighbors: np.ndarray, max_closeness
 
 
 class NeighboursStrategy(BaseStrategy):
-    def __init__(self, num_neighbours, metric="cosine", fixed_budget=True, load_from_prev_iter=True, nn_thr = None,
+    def __init__(self, num_neighbours, metric="cosine", neigh_base='embeddings', fixed_budget=True, load_from_prev_iter=True, nn_thr = None,
                 p_loss=False, nms=True, nms_e0=True, comb_score=False, random_proportion: float = 0, iter_weight: float = 0, comb_score_quant: bool = False):
         self.num_neighbours = num_neighbours + 1
         self.metric = metric
+        self.neigh_base = neigh_base
         self.fixed_budget = fixed_budget
         self.nn_thr = nn_thr
         self.load_from_prev_iter = load_from_prev_iter
@@ -62,6 +63,7 @@ class NeighboursStrategy(BaseStrategy):
         options = {
             "num_neighbours": self.num_neighbours,
             "metric": self.metric,
+            "neigh_base": self.neigh_base,
             # "fixed_budget": self.fixed_budget,
             # "finetune": self.finetune,
             "p_loss": self.include_param_loss,
@@ -77,7 +79,7 @@ class NeighboursStrategy(BaseStrategy):
             prev_model = almodel.get_lightning_module()(**almodel.get_hyperparameters())
             if get_current_iteration() and self.load_from_prev_iter:
                 prev_model.load_state_dict(get_previous_interation_state_dict())
-            return get_neighbours(prev_model, dataset, "original", num_neighbours=self.num_neighbours, metric=self.metric, return_predicts=False)
+            return get_neighbours(prev_model, dataset, "original", num_neighbours=self.num_neighbours, metric=self.metric, neigh_base=self.neigh_base, return_predicts=False)
 
         e0, neighbours_original_inds = load_or_compute(
             [self._build_filename("embeddings_original"), self._build_filename("neighbours_original_inds")],
@@ -86,7 +88,7 @@ class NeighboursStrategy(BaseStrategy):
 
         def compute_finetuned_embeddings():
             e1, neighbors, pred = get_neighbours(
-                model, dataset, "finetuned", num_neighbours=self.num_neighbours, metric=self.metric, return_predicts=True
+                model, dataset, "finetuned", num_neighbours=self.num_neighbours, metric=self.metric, neigh_base=self.neigh_base, return_predicts=True
             )
             entropy_scores = entropy(pred)
             return e1, neighbors, entropy_scores

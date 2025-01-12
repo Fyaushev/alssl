@@ -3,6 +3,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
+from scipy.special import softmax
 from sklearn.neighbors import NearestNeighbors
 from torch import nn
 
@@ -68,7 +69,9 @@ def get_neighbours(
         num_neighbours: int, 
         return_distance: bool = False, 
         metric: str = 'minkowski',
+        neigh_base: str = 'embeddings',
         return_predicts: bool = False,
+        return_predicts_full: bool = False,
     ):
     '''
     Obtain embeddings and find `num_neighbours` nearest neighbours in the same embedding space
@@ -77,17 +80,21 @@ def get_neighbours(
         model,
         dataset.unlabeled_dataloader(), 
         scoring="none", desc=desc)
-    np.save('y_gt.npy', ys)
-    np.save('y_preds.npy', y_preds)
 
     # fit KN 
     neigh = NearestNeighbors(n_neighbors=num_neighbours, metric=metric, n_jobs=-1)
-    neigh.fit(X=embeddings)
+    if neigh_base == 'embeddings':
+        neigh.fit(X=embeddings)
+    elif neigh_base == 'proba':
+        proba = softmax(y_preds, 1)
+        neigh.fit(X=proba)
 
     if return_distance:
         dists, neighbours = neigh.kneighbors(X=embeddings, return_distance=return_distance)
         return embeddings, dists[:, 1:], neighbours[:, 1:]
     elif return_predicts:
         return embeddings, neigh.kneighbors(X=embeddings, return_distance=return_distance)[:, 1:], y_preds
+    elif return_predicts_full:
+        return embeddings, neigh.kneighbors(X=embeddings, return_distance=return_distance)[:, 1:], ys, y_preds
     else:
         return embeddings, neigh.kneighbors(X=embeddings, return_distance=return_distance)[:, 1:]
