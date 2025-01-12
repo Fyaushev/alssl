@@ -84,17 +84,19 @@ def get_neighbours(
     # fit KN 
     neigh = NearestNeighbors(n_neighbors=num_neighbours, metric=metric, n_jobs=-1)
     if neigh_base == 'embeddings':
-        neigh.fit(X=embeddings)
+        to_fit = embeddings
     elif neigh_base == 'proba':
         proba = softmax(y_preds, 1)
-        neigh.fit(X=proba)
+        to_fit = proba
+
+    neigh.fit(X=to_fit)
 
     if return_distance:
-        dists, neighbours = neigh.kneighbors(X=embeddings, return_distance=return_distance)
+        dists, neighbours = neigh.kneighbors(X=to_fit, return_distance=return_distance)
         return embeddings, dists[:, 1:], neighbours[:, 1:]
     elif return_predicts:
-        return embeddings, neigh.kneighbors(X=embeddings, return_distance=return_distance)[:, 1:], y_preds
+        return embeddings, neigh.kneighbors(X=to_fit, return_distance=return_distance)[:, 1:], y_preds
     elif return_predicts_full:
-        return embeddings, neigh.kneighbors(X=embeddings, return_distance=return_distance)[:, 1:], ys, y_preds
+        return embeddings, neigh.kneighbors(X=to_fit, return_distance=return_distance)[:, 1:], ys, y_preds
     else:
-        return embeddings, neigh.kneighbors(X=embeddings, return_distance=return_distance)[:, 1:]
+        return embeddings, neigh.kneighbors(X=to_fit, return_distance=return_distance)[:, 1:]
