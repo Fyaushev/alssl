@@ -14,10 +14,10 @@ class RegNetX400MFClassifier(nn.Module):
         self.num_classes = num_classes
         # RegNetX-400MF pretrained on ImageNet-1k
         self.backbone = timm.create_model('regnetx_004.pycls_in1k', pretrained=True)
-        self.classifier = deepcopy(self.backbone.head) # same as in the orig model
-        self.backbone.head = nn.Identity()
+        # self.classifier = deepcopy(self.backbone.head) # same as in the orig model
+        self.backbone.head.fc = nn.Identity()
 
-        self.classifier.fc = nn.Linear(in_features=384, out_features=num_classes, bias=True) # same as in the orig model
+        self.classifier = nn.Linear(in_features=384, out_features=num_classes, bias=True) # same as in the orig model
 
         for param in self.backbone.parameters():
             param.requires_grad_(False)
