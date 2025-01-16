@@ -42,7 +42,7 @@ def furthest_first(X, nn, X_set, n):
             dist_new_ctr_nn[i] = dist_new_ctr[nn[i]].mean()
         
         for j in range(m):
-            min_dist[j] = min(min_dist[j], dist_new_ctr[j, 0])
+            min_dist[j] = min(min_dist[j], dist_new_ctr_nn[j, 0])
 
     return np.array(idxs)
 
