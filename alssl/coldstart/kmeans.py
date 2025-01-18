@@ -1,6 +1,6 @@
-from pathlib import Path
 
 import numpy as np
+from scipy.cluster.vq import vq
 from sklearn.cluster import KMeans
 from torch import nn
 
@@ -14,7 +14,7 @@ class KMeansColdStart(BaseColdStart):
     """
     Random sampling of initial ids
     """
-    def __init__(self, initial_train_size: int, random_seed: int, num_classes: int, samples_per_class: int = 3):
+    def __init__(self, initial_train_size: int, random_seed: int, num_classes: int, samples_per_class: int = 3, is_random: bool = True):
         self.initial_train_size = initial_train_size
         self.random_seed = random_seed
         self.num_classes = num_classes
@@ -22,9 +22,11 @@ class KMeansColdStart(BaseColdStart):
         self.samples_per_class = samples_per_class
         assert samples_per_class > 0, f"Number of samples per class should be positive. Current: {samples_per_class}"
 
+        self.is_random = is_random
+
     def select_ids(self, model: nn.Module, dataset: ALDataModule, **kwargs) -> list:
         all_ids = np.array(dataset.get_unlabeled_ids())
-        cluster_labels = self.run_kmeans(model, dataset)
+        cluster_labels, distances_to_centroids = self.run_kmeans(model, dataset)
 
         train_ids = []
 
@@ -32,7 +34,12 @@ class KMeansColdStart(BaseColdStart):
         for cluster in np.unique(cluster_labels):
             cluster_inds = np.argwhere(cluster_labels == cluster).ravel()
 
-            selected_cluster_inds = np.random.choice(cluster_inds, self.samples_per_class, replace=False)
+            if self.is_random:
+                selected_cluster_inds = np.random.choice(cluster_inds, self.samples_per_class, replace=False)
+            elif not self.is_random and (self.samples_per_class == 1):
+                selected_cluster_inds = [cluster_inds[np.argmin(distances_to_centroids[cluster_inds])]]
+            else:
+                raise ValueError('Poor KMeans setup, check `samples_per_class` and `is_random` parameters.')
             
             train_ids.extend(all_ids[selected_cluster_inds])
 
@@ -51,6 +58,8 @@ class KMeansColdStart(BaseColdStart):
 
         kmeans = KMeans(n_clusters=self.num_classes, random_state=self.random_seed, n_init="auto").fit(embeddings)
         kmeans_labels = kmeans.predict(embeddings)
-        return kmeans_labels
+        centroids = kmeans.cluster_centers_
+        closest, distances_to_centroids = vq(embeddings, centroids)
+        return kmeans_labels, distances_to_centroids
     
     

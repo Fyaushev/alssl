@@ -11,6 +11,7 @@ from .coreset import CoresetStrategy
 from .entropy import EntropyStrategy
 # from .alssl.neighbours_path import NeighboursPathStrategy
 from .golden_rule import GRStrategy
+from .kmeans import KMeansStrategy
 from .random import RandomStrategy
 
 locals = locals()

@@ -66,6 +66,7 @@ def run_exp(config: DictConfig) -> None:
             return {
                 'learning_rate':config.training.learning_rate,
                 'num_classes':num_classes,
+                'blocks_to_retrain':config.training.blocks_to_retrain,
                 'optimizer_kwargs':config.training.optimizer_kwargs,
                 'scheduler_kwargs':scheduler_kwargs,
                 'include_param_loss':config.training.include_param_loss,
@@ -76,7 +77,10 @@ def run_exp(config: DictConfig) -> None:
     # TRAIN
 
     N = len(train_dataset)
-    budget_size = int(config.strategy.budget_percent / 100 * N)
+    if config.strategy.budget_per_class > 0:
+        budget_size = config.strategy.budget_per_class * num_classes
+    else:
+        budget_size = int(config.strategy.budget_percent / 100 * N)
     initial_train_size = int(config.strategy.initial_train_percent / 100 * N)
 
     print('budget_size', budget_size)
@@ -87,8 +91,21 @@ def run_exp(config: DictConfig) -> None:
 
     exp_name = config.strategy.strategy_name + '_' + '_'.join([f'{k[:4]}-{v}' for k, v in config.strategy.strategy_params.items()])
     coldstart_name = config.coldstart.coldstart_name + '_' + '_'.join([f'{k}-{v}' for k, v in config.coldstart.coldstart_params.items()])
-    exp_root_path = root_path / (str(config.strategy.initial_train_percent) + '_' + coldstart_name) / str(config.training.random_seed) / str(config.strategy.budget_percent)
+    if config.training.include_param_loss:
+        exp_name += '_ploss'
+        coldstart_name += '_ploss'
+    if config.training.blocks_to_retrain == 0:
+        exp_name += '_frozen'
+        coldstart_name += '_frozen'
     
+    exp_root_path = root_path / (str(config.strategy.initial_train_percent) + '_' + coldstart_name) / str(config.training.random_seed) 
+    
+    if config.strategy.budget_per_class > 0:
+        exp_root_path = exp_root_path / str(config.strategy.budget_per_class)
+        # budget_size = config.strategy.budget_per_class * num_classes
+    else:
+        exp_root_path = exp_root_path / str(config.strategy.budget_percent)
+
     with open_dict(config):
         config.coldstart.coldstart_params.initial_train_size = initial_train_size
         config.coldstart.coldstart_params.random_seed = config.training.random_seed

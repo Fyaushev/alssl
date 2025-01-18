@@ -23,13 +23,17 @@ class RegNetX400MFClassifier(nn.Module):
             param.requires_grad_(False)
         
         # unfreeze blocks
-        assert blocks_to_retrain == 1, 'More unfreezing is not yet supported'
-        block = self.backbone.s4
-        
-        print(f'Unfreeze block s4')
-        for pname, params in block.named_parameters():
-            if 'bn' not in pname:
-                params.requires_grad = True
+        assert blocks_to_retrain <= 1, 'More unfreezing is not yet supported'
+
+        if blocks_to_retrain == 1:
+            block = self.backbone.s4
+            
+            print(f'Unfreeze block s4')
+            for pname, params in block.named_parameters():
+                if 'bn' not in pname:
+                    params.requires_grad = True
+        else:
+            print(f'Block s4 is freezed')
         
         for param in self.classifier.parameters():
             param.requires_grad_(True)
