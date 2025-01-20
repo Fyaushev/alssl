@@ -10,16 +10,36 @@ from ..metric import mean_iou
 
 
 class DinoClassifier(nn.Module):
-    def __init__(self, num_classes=10):
+    def __init__(self, num_classes=10, blocks_to_retrain=0):
         super(DinoClassifier, self).__init__()
+        self.blocks_to_retrain = blocks_to_retrain
         self.num_classes = num_classes
-        self.transformer = AutoModel.from_pretrained("facebook/dinov2-base")
-        self.classifier = nn.Sequential(
-            nn.Linear(768, 512), nn.ReLU(), nn.Linear(512, num_classes)
-        )
+        self.backbone = AutoModel.from_pretrained("facebook/dinov2-base")
+        # self.classifier = nn.Sequential(
+        #     nn.Linear(768, 512), nn.ReLU(), nn.Linear(512, num_classes)
+        # )
+        self.classifier = nn.Linear(768, num_classes)
+
+        for param in self.backbone.parameters():
+            param.requires_grad_(False)
+        
+        # unfreeze blocks
+        count = 0
+        for name, block in self.backbone.encoder.layer.named_children():
+            if count >= (len(self.backbone.encoder.layer) - blocks_to_retrain):
+                print(f'Unfreeze block {name}')
+                for pname, params in block.named_parameters():
+                    if 'bn' not in pname:
+                        params.requires_grad = True
+            else:
+                print(f'Keep block {name} frozen')
+            count += 1
+        
+        for param in self.classifier.parameters():
+            param.requires_grad_(True)
 
     def forward(self, x):
-        embeddings = self.transformer(x).pooler_output
+        embeddings = self.backbone(x).pooler_output
         logits = self.classifier(embeddings)
         return logits, embeddings
 
@@ -99,13 +119,14 @@ class LightningDinoClassifier(L.LightningModule):
         self,
         learning_rate=0.001,
         num_classes=10,
+        blocks_to_retrain=0,
         scheduler_kwargs={},
         optimizer_kwargs={},
         include_param_loss: bool = True,
         param_loss_beta: float = 0.01,
     ):
         super().__init__()
-        self.model = DinoClassifier(num_classes=num_classes)
+        self.model = DinoClassifier(num_classes=num_classes, blocks_to_retrain=blocks_to_retrain)
         self.include_param_loss = include_param_loss
         self.param_loss_beta = param_loss_beta
         self.source_weight = {}

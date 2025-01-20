@@ -34,13 +34,14 @@ class EffNetB0Classifier(nn.Module):
                 print(f'Keep block {name} frozen')
             count += 1
         
-        # unfreeze last layers
-        for name, child in self.backbone.named_children():
-            if name in ['conv_head', 'act2', 'global_pool', 'classifier']:
-                print(f'Unfreeze block {name}')
-                for params in child.parameters():
-                    params.requires_grad = True
-        
+        if blocks_to_retrain > 0:
+            # unfreeze last layers
+            for name, child in self.backbone.named_children():
+                if name in ['conv_head', 'act2', 'global_pool', 'classifier']:
+                    print(f'Unfreeze block {name}')
+                    for params in child.parameters():
+                        params.requires_grad = True
+            
         self.classifier.requires_grad = True
 
     def forward(self, x):
