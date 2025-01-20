@@ -2,7 +2,7 @@ import lightning as L
 import torch
 import torch.nn as nn
 from torch import nn
-from torch.optim.lr_scheduler import MultiStepLR
+from torch.optim.lr_scheduler import MultiStepLR, OneCycleLR
 from torchmetrics.functional import accuracy
 from transformers import AutoModel
 
@@ -81,18 +81,12 @@ class LightningCLIPClassifier(L.LightningModule):
             self.model.parameters(), lr=self.learning_rate, **self.optimizer_kwargs
         )
 
-        scheduler = MultiStepLR(optimizer, **self.scheduler_kwargs)
-
-        # scheduler = ReduceLROnPlateau(
-        #     optimizer, **self.scheduler_kwargs
-        # )
-        # "monitor": "train_loss"
-        # scheduler = OneCycleLR(optimizer, **self.scheduler_kwargs)
+        scheduler = OneCycleLR(optimizer, **self.scheduler_kwargs)
 
         return [optimizer], [
-            {"scheduler": scheduler, "interval": "epoch", "monitor": "train_loss"}
+            {"scheduler": scheduler, "interval": "step", "monitor": "train_loss"}
         ]
-
+    
     def training_step(self, batch, batch_idx):
         images, labels = batch
         logits, embeddings = self(images)
