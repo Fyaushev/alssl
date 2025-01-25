@@ -6,7 +6,6 @@ from torchvision import transforms
 transform_train = transforms.Compose(
     [
         transforms.ToTensor(),
-        # transforms.RandomCrop(32, padding=4),
         transforms.RandomHorizontalFlip(),
         transforms.Resize((224, 224), antialias=True),
         transforms.RandomRotation(10),
@@ -24,17 +23,15 @@ transform_test = transforms.Compose(
 
 
 def get_num_classes():
-    return 10
+    return 37
 
 
 def get_dataset(
-    subset="train", data_path=Path("/shared/projects/active_learning/cifar10")
+    subset="train", data_path=Path("/shared/projects/active_learning/pets")
 ):
     assert subset in ["train", "test"]
     transform = transform_train if subset == "train" else transform_test
-    return (
-        torchvision.datasets.CIFAR10(
-            root=data_path, train=subset == "train", download=True
-        ),
-        transform,
-    )
+    split = "trainval" if subset == "train" else subset
+    ds = torchvision.datasets.OxfordIIITPet(root=data_path, split=split, download=True)
+    ds.targets = ds._labels
+    return ds, transform

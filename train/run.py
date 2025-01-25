@@ -13,6 +13,7 @@ from alssl.model.base import BaseALModel
 from alssl.model.clip import LightningCLIPClassifier
 from alssl.model.dino import LightningDinoClassifier
 from alssl.model.effnet_b0 import LightningEffNetB0Classifier
+from alssl.model.lvm_med_resnet import LightningLMVMedResnetClassifier
 from alssl.model.regnet_x_400mf import LightningRegNetX400MFClassifier
 from alssl.model.resnet18 import LightningResnet18Classifier
 from alssl.strategy import strategies
@@ -65,6 +66,8 @@ def run_exp(config: DictConfig) -> None:
                 return LightningRegNetX400MFClassifier
             elif config.training.backbone == 'resnet18':
                 return LightningResnet18Classifier
+            elif config.training.backbone == 'lvm_med_resnet':
+                return LightningLMVMedResnetClassifier
         def get_hyperparameters(self):
             return {
                 'learning_rate':config.training.learning_rate,
@@ -73,6 +76,7 @@ def run_exp(config: DictConfig) -> None:
                 'optimizer_kwargs':config.training.optimizer_kwargs,
                 'scheduler_kwargs':scheduler_kwargs,
                 'include_param_loss':config.training.include_param_loss,
+                'root':config.experiment.data_path,
             }
 
     model = Model()

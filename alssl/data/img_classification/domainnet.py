@@ -3,10 +3,11 @@ from pathlib import Path
 import torchvision
 from torchvision import transforms
 
+from .utils import CustomImageFolder
+
 transform_train = transforms.Compose(
     [
         transforms.ToTensor(),
-        # transforms.RandomCrop(32, padding=4),
         transforms.RandomHorizontalFlip(),
         transforms.Resize((224, 224), antialias=True),
         transforms.RandomRotation(10),
@@ -24,17 +25,19 @@ transform_test = transforms.Compose(
 
 
 def get_num_classes():
-    return 10
+    return 345
 
 
 def get_dataset(
-    subset="train", data_path=Path("/shared/projects/active_learning/cifar10")
+    subset="train", data_path=Path("/shared/projects/active_learning/domainnet"), domainnet_subset="real"
 ):
     assert subset in ["train", "test"]
+    data_path = data_path / 'DomainNet'
+    
     transform = transform_train if subset == "train" else transform_test
     return (
-        torchvision.datasets.CIFAR10(
-            root=data_path, train=subset == "train", download=True
-        ),
+        CustomImageFolder(
+            root=str(data_path), 
+            file_path=str(data_path/f'{domainnet_subset}_{subset}.txt')),
         transform,
     )

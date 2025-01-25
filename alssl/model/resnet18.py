@@ -47,6 +47,7 @@ class Resnet18Classifier(nn.Module):
 class LightningResnet18Classifier(L.LightningModule):
     def __init__(
         self,
+        root='',
         learning_rate=0.001,
         num_classes=10,
         blocks_to_retrain=1,
@@ -54,6 +55,7 @@ class LightningResnet18Classifier(L.LightningModule):
         optimizer_kwargs={},
         include_param_loss: bool = True,
         param_loss_beta: float = 0.01,
+        *args,
     ):
         super().__init__()
         self.model = Resnet18Classifier(num_classes=num_classes, blocks_to_retrain=blocks_to_retrain)

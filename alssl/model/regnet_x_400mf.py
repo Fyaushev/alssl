@@ -47,6 +47,7 @@ class RegNetX400MFClassifier(nn.Module):
 class LightningRegNetX400MFClassifier(L.LightningModule):
     def __init__(
         self,
+        root='',
         learning_rate=0.001,
         num_classes=10,
         blocks_to_retrain=1,
@@ -54,6 +55,7 @@ class LightningRegNetX400MFClassifier(L.LightningModule):
         optimizer_kwargs={},
         include_param_loss: bool = True,
         param_loss_beta: float = 0.01,
+        *args
     ):
         super().__init__()
         self.model = RegNetX400MFClassifier(num_classes=num_classes, blocks_to_retrain=blocks_to_retrain)

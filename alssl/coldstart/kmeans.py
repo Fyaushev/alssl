@@ -1,4 +1,6 @@
 
+import os
+
 import numpy as np
 from scipy.cluster.vq import vq
 from sklearn.cluster import KMeans
@@ -8,6 +10,8 @@ from ..data.base import ALDataModule
 from ..strategy.alssl.utils import load_or_compute
 from ..strategy.utils import predict
 from .base import BaseColdStart
+
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
 
 
 class KMeansColdStart(BaseColdStart):
