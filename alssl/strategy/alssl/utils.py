@@ -93,10 +93,10 @@ def get_neighbours(
 
     if return_distance:
         dists, neighbours = neigh.kneighbors(X=to_fit, return_distance=return_distance)
-        return embeddings, dists[:, 1:], neighbours[:, 1:]
+        return embeddings, dists[:, 1:], neighbours[:, 1:], neigh
     elif return_predicts:
         return embeddings, neigh.kneighbors(X=to_fit, return_distance=return_distance)[:, 1:], y_preds
     elif return_predicts_full:
-        return embeddings, neigh.kneighbors(X=to_fit, return_distance=return_distance)[:, 1:], ys, y_preds
+        return embeddings, neigh.kneighbors(X=to_fit, return_distance=return_distance)[:, 1:], ys, y_preds, neigh
     else:
         return embeddings, neigh.kneighbors(X=to_fit, return_distance=return_distance)[:, 1:]
