@@ -165,7 +165,7 @@ def nms_all_points(scores, neighbors_finetuned, neighbours_train, samples_per_cl
     print('neighbors_combined.shape', neighbors_combined.shape)
     selected_inds = non_max_suppression(-scores_combined, neighbors_combined[:, :num_neighbours_nms], max_boxes=n_train+samples_per_class)
     
-    selected_inds = [idx - n_train for idx in selected_inds if idx not in range(n_train)][:n_train]
+    selected_inds = [idx - n_train for idx in selected_inds if idx not in range(n_train)][:samples_per_class]
     return selected_inds
 
 
