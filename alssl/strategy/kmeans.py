@@ -64,7 +64,7 @@ class KMeansStrategy(BaseStrategy):
     """
     Random sampling of initial ids
     """
-    def __init__(self, num_classes: int, samples_per_class: int = 1, is_random: bool = False, scoring=None, num_neighbours=None, num_neighbours_nms=None, comb_score=False, inverse=False):
+    def __init__(self, num_classes: int, samples_per_class: int = 1, is_random: bool = False, scoring=None, num_neighbours=None, num_neighbours_nms=None, comb_score=False, inverse=False, nms=True):
         self.num_classes = num_classes
 
         self.samples_per_class = samples_per_class
@@ -76,6 +76,7 @@ class KMeansStrategy(BaseStrategy):
         self.num_neighbours_nms = num_neighbours_nms
         self.comb_score = comb_score
         self.inverse = inverse
+        self.nms = nms
         if self.scoring is not None and self.is_random:
             raise ValueError('Poor KMeans setup, check `scoring` and `is_random` parameters.')
 
@@ -124,14 +125,18 @@ class KMeansStrategy(BaseStrategy):
                 scores = nn_scores[cluster_inds]
                 if self.inverse:
                     scores = -scores
-                selected_cluster_inds = cluster_inds[nms_all_points(scores, neighbors_finetuned[cluster_inds], neighbours_train, self.samples_per_class, self.num_neighbours_nms)]
-                # selected_cluster_inds = cluster_inds[np.argsort(scores)[:self.samples_per_class]]
+                if self.nms:
+                    selected_cluster_inds = cluster_inds[nms_all_points(scores, neighbors_finetuned[cluster_inds], neighbours_train, self.samples_per_class, self.num_neighbours_nms)]
+                else:
+                    selected_cluster_inds = cluster_inds[np.argsort(scores)[:self.samples_per_class]]
             elif self.scoring == 'typiclust':
                 scores = typi_scores[cluster_inds]
                 if self.inverse:
                     scores = -scores
-                selected_cluster_inds = cluster_inds[nms_all_points(scores, neighbors_finetuned[cluster_inds], neighbours_train, self.samples_per_class, self.num_neighbours_nms)]
-                # selected_cluster_inds = cluster_inds[np.argsort(scores)[:self.samples_per_class]]
+                if self.nms:
+                    selected_cluster_inds = cluster_inds[nms_all_points(scores, neighbors_finetuned[cluster_inds], neighbours_train, self.samples_per_class, self.num_neighbours_nms)]
+                else:
+                    selected_cluster_inds = cluster_inds[np.argsort(scores)[:self.samples_per_class]]
             else:
                 raise ValueError('Poor KMeans setup, check `samples_per_class` and `is_random` parameters.')
             
