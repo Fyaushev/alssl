@@ -64,7 +64,7 @@ class KMeansStrategy(BaseStrategy):
     """
     Random sampling of initial ids
     """
-    def __init__(self, num_classes: int, samples_per_class: int = 1, is_random: bool = False, scoring=None, num_neighbours=None, num_neighbours_nms=None, comb_score=False, inverse=False, nms=True):
+    def __init__(self, num_classes: int, samples_per_class: int = 1, is_random: bool = False, scoring=None, num_neighbours=None, num_neighbours_nms=None, comb_score=False, inverse=False, nms=True, cluster_curr=True):
         self.num_classes = num_classes
 
         self.samples_per_class = samples_per_class
@@ -77,6 +77,7 @@ class KMeansStrategy(BaseStrategy):
         self.comb_score = comb_score
         self.inverse = inverse
         self.nms = nms
+        self.cluster_curr = cluster_curr
         if self.scoring is not None and self.is_random:
             raise ValueError('Poor KMeans setup, check `scoring` and `is_random` parameters.')
 
@@ -84,8 +85,9 @@ class KMeansStrategy(BaseStrategy):
         all_ids = np.array(dataset.get_unlabeled_ids())
         
         def _predict_unlabeled():
+            m = model if self.cluster_curr else almodel.get_lightning_module()(**almodel.get_hyperparameters())
             _, y_preds, embeddings = predict(
-                model,
+                m,
                 dataset.unlabeled_dataloader(), 
                 scoring="none", desc="KMeans strategy")
             return embeddings, y_preds
