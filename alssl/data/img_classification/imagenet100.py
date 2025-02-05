@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import numpy as np
-import torchvision
 from datasets import load_dataset
 from torch.utils.data import Dataset
 from torchvision import transforms
@@ -43,6 +42,9 @@ class ImageNet100Dataset(Dataset):
             image_3ch[:,:,2] = image
 
             image = image_3ch
+
+        if np.asarray(image).shape[-1] == 4:
+            image = np.asarray(image)[..., :-1]
         
         return image, label
 
