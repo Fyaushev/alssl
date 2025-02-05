@@ -33,7 +33,7 @@ class ImageNet100Dataset(Dataset):
         self.targets = self.ds['label']
 
     def __getitem__(self, index):
-        out_dict = self.ds[index]
+        out_dict = self.ds[int(index)]
         image, label = out_dict['image'], out_dict['label']
         if np.asarray(image).ndim == 2:
             image_3ch = np.zeros( ( np.array(image).shape[0], np.array(image).shape[1], 3 ) )
@@ -46,7 +46,7 @@ class ImageNet100Dataset(Dataset):
         if np.asarray(image).shape[-1] == 4:
             image = np.asarray(image)[..., :-1]
         
-        return image, label
+        return np.array(image).astype(np.float32).copy(), label
 
     def __len__(self):
         return len(self.ds)
