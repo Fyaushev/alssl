@@ -3,6 +3,11 @@ scikit_learn
 scipy
 tqdm
 torchmetrics
+hydra-core
+medmnist
+timm
+optuna
+optuna-integration[pytorch_lightning]
 deep_pipe<1.0.0
 albumentations>=1.4.0,<2.0.0
 lightning>=2.0.0,<3.0.0
