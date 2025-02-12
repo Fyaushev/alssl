@@ -71,7 +71,7 @@ def calculate_umap_scores(model, dataset, almodel, num_neighbours=250, metric="c
         model, dataset, "finetuned", num_neighbours=num_neighbours, metric=metric, return_predicts_full=True
     )
     scores = []
-    for idx in tqdm(range(e0.shape[0])):
+    for idx in tqdm(range(e0.shape[0]), desc='UMAP scores'):
         nn_original = neighbors_original[idx]
         nn_finetuned = neighbors_finetuned[idx]
 
@@ -83,6 +83,7 @@ def calculate_umap_scores(model, dataset, almodel, num_neighbours=250, metric="c
         ce = - graph_original * np.log(graph_finetuned + 0.01) - (1 - graph_original) * np.log(1 - graph_finetuned + 0.01)
 
         scores.append(float(np.median(ce)))
+    scores = np.array(scores)
     
     return scores, kmeans_finetuned, neighbors_finetuned
 
