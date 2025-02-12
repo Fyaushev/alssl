@@ -14,6 +14,7 @@ from ..strategy.alssl.utils import load_or_compute
 from .alssl.utils import (get_current_iteration, get_neighbours,
                           get_previous_interation_state_dict)
 from .base import BaseStrategy
+from .umaplike import construct_graph
 from .utils import predict
 
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
@@ -50,6 +51,38 @@ def calculate_nn_scores(model, dataset, almodel, num_neighbours=250, metric="cos
     if comb_score:
         mean_nn_scores = np.array([scores[orig].mean() for orig in neighbors_original])
         scores = scores / (mean_nn_scores + 1e-10)
+    
+    return scores, kmeans_finetuned, neighbors_finetuned
+
+def calculate_umap_scores(model, dataset, almodel, num_neighbours=250, metric="cosine", load_from_prev_iter=False):
+    """
+    Calculate nearest-neighbor-based scores and return neighbors for further operations.
+    """
+    # Load previous model if required
+    prev_model = almodel.get_lightning_module()(**almodel.get_hyperparameters())
+    if get_current_iteration() and load_from_prev_iter:
+        prev_model.load_state_dict(get_previous_interation_state_dict())
+
+    # Compute embeddings and neighbors for original and finetuned models
+    e0, neighbors_original, y_gt, y_pred_original, kmeans_original = get_neighbours(
+        prev_model, dataset, "original", num_neighbours=num_neighbours, metric=metric, return_predicts_full=True
+    )
+    e1, neighbors_finetuned, y_gt, y_pred_finetuned, kmeans_finetuned = get_neighbours(
+        model, dataset, "finetuned", num_neighbours=num_neighbours, metric=metric, return_predicts_full=True
+    )
+    scores = []
+    for idx in tqdm(range(e0.shape[0])):
+        nn_original = neighbors_original[idx]
+        nn_finetuned = neighbors_finetuned[idx]
+
+        combined_neighbours = np.array(list(set(nn_original) & set(nn_finetuned)))
+
+        graph_original = construct_graph(e0[combined_neighbours, :], num_neighbours)
+        graph_finetuned = construct_graph(e1[combined_neighbours, :], num_neighbours)
+
+        ce = - graph_original * np.log(graph_finetuned + 0.01) - (1 - graph_original) * np.log(1 - graph_finetuned + 0.01)
+
+        scores.append(float(np.median(ce)))
     
     return scores, kmeans_finetuned, neighbors_finetuned
 
@@ -101,11 +134,14 @@ class KMeansStrategy(BaseStrategy):
         if self.scoring == 'nn':
             nn_scores, kmeans_finetuned, neighbors_finetuned = calculate_nn_scores(
                 model, dataset, almodel, num_neighbours=self.num_neighbours, metric="cosine", comb_score=self.comb_score)
+        elif self.scoring == 'umap':
+            umap_scores, kmeans_finetuned, neighbors_finetuned = calculate_umap_scores(
+                model, dataset, almodel, num_neighbours=self.num_neighbours, metric="cosine")
         elif self.scoring == 'typiclust':
             typi_scores, kmeans_finetuned, neighbors_finetuned = calculate_typi_scores(
                 model, dataset, almodel, num_neighbours=self.num_neighbours, metric="cosine")
             
-        if self.scoring in ['nn', 'typiclust']:
+        if self.scoring in ['nn', 'typiclust', 'umap']:
             _, y_preds_train, embeddings_train = predict(
                 model,
                 dataset.train_dataloader(), 
@@ -126,7 +162,7 @@ class KMeansStrategy(BaseStrategy):
             elif self.scoring == 'nn':
                 scores = nn_scores[cluster_inds]
                 if self.inverse:
-                    scores = -scores
+                    scores = -scores # most stable
                 if self.nms:
                     selected_cluster_inds = cluster_inds[nms_all_points(scores, neighbors_finetuned[cluster_inds], neighbours_train, self.samples_per_class, self.num_neighbours_nms)]
                 else:
@@ -135,6 +171,14 @@ class KMeansStrategy(BaseStrategy):
                 scores = typi_scores[cluster_inds]
                 if self.inverse:
                     scores = -scores
+                if self.nms:
+                    selected_cluster_inds = cluster_inds[nms_all_points(scores, neighbors_finetuned[cluster_inds], neighbours_train, self.samples_per_class, self.num_neighbours_nms)]
+                else:
+                    selected_cluster_inds = cluster_inds[np.argsort(scores)[:self.samples_per_class]]
+            elif self.scoring == 'umap':
+                scores = -umap_scores[cluster_inds]
+                if self.inverse:
+                    scores = -scores # most stable
                 if self.nms:
                     selected_cluster_inds = cluster_inds[nms_all_points(scores, neighbors_finetuned[cluster_inds], neighbours_train, self.samples_per_class, self.num_neighbours_nms)]
                 else:
