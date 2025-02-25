@@ -10,10 +10,10 @@ from alssl.al.train import ALTrainer
 from alssl.coldstart import coldstarts
 from alssl.data.base import ALDataModule
 from alssl.model.base import BaseALModel
-from alssl.model.clip import LightningCLIPClassifier
 from alssl.model.dino import LightningDinoClassifier
 from alssl.model.effnet_b0 import LightningEffNetB0Classifier
 from alssl.model.lvm_med_resnet import LightningLMVMedResnetClassifier
+from alssl.model.mae import LightningMAEClassifier
 from alssl.model.regnet_x_400mf import LightningRegNetX400MFClassifier
 from alssl.model.resnet18 import LightningResnet18Classifier
 from alssl.strategy import strategies
@@ -58,8 +58,6 @@ def run_exp(config: DictConfig) -> None:
         def get_lightning_module(self):
             if config.training.backbone == 'dino':
                 return LightningDinoClassifier
-            elif config.training.backbone == 'clip':
-                return LightningCLIPClassifier
             elif config.training.backbone == 'effnet_b0':
                 return LightningEffNetB0Classifier
             elif config.training.backbone == 'regnet_x_400mf':
@@ -68,6 +66,8 @@ def run_exp(config: DictConfig) -> None:
                 return LightningResnet18Classifier
             elif config.training.backbone == 'lvm_med_resnet':
                 return LightningLMVMedResnetClassifier
+            elif config.training.backbone == 'mae':
+                return LightningMAEClassifier
         def get_hyperparameters(self):
             return {
                 'learning_rate':config.training.learning_rate,
