@@ -2,6 +2,7 @@ from typing import Callable, Literal, Optional
 
 import numpy as np
 import torch
+from scipy.optimize import linear_sum_assignment
 from tqdm import tqdm
 
 
@@ -66,3 +67,36 @@ def predict(
         return scores
     else:
         return ys[:sample_idx], y_preds[:sample_idx], all_embeddings[:sample_idx]
+    
+
+def get_cluster_acc(y_pred, y_true, return_matching=False):
+    """
+    code from https://github.com/mlbio-epfl/turtle
+    
+    Calculate clustering accuracy and clustering mean per class accuracy.
+    Requires scipy installed
+    # Arguments
+        y_pred: predicted labels, numpy.array with shape `(n_samples,)`
+        y_true: true labels, numpy.array with shape `(n_samples,)`
+    # Return
+        Accuracy in [0,1]
+    """
+    y_true = y_true.astype(np.int64)
+    assert y_pred.size == y_true.size
+    D = max(y_pred.max(), y_true.max()) + 1
+    w = np.zeros((D, D), dtype=np.int64)
+    for i in range(y_pred.size):
+        w[y_pred[i], y_true[i]] += 1
+    row_ind, col_ind = linear_sum_assignment(w.max() - w)
+    match = np.array(list(map(lambda i: col_ind[i], y_pred)))
+
+    mean_per_class = [0 for i in range(D)]
+    for c in range(D):
+        mask = y_true == c
+        mean_per_class[c] = np.mean((match[mask] == y_true[mask]))
+    mean_per_class_acc = np.mean(mean_per_class)
+
+    if return_matching:
+        return w[row_ind, col_ind].sum() / y_pred.size, mean_per_class_acc, match
+    else:
+        return w[row_ind, col_ind].sum() / y_pred.size, mean_per_class_acc

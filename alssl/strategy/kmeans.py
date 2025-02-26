@@ -16,7 +16,7 @@ from .alssl.utils import (get_current_iteration, get_neighbours,
                           get_previous_interation_state_dict)
 from .base import BaseStrategy
 from .umaplike import construct_graph
-from .utils import predict
+from .utils import get_cluster_acc, predict
 
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
 
@@ -109,6 +109,65 @@ def calculate_nn_clust_scores(model, all_ids, dataset, almodel, inverse, cluster
 
     return all_ids[np.array(kmeans_centroids)[np.argsort(nn_scores)][:num_classes]]
 
+def calculate_stability_clust_scores(model, all_ids, dataset, almodel, inverse, cluster_curr, num_classes, num_classes_scale=2, num_neighbours=5, metric="cosine", comb_score=False, load_from_prev_iter=False):
+     # Load previous model if required
+    prev_model = almodel.get_lightning_module()(**almodel.get_hyperparameters())
+    if get_current_iteration() and load_from_prev_iter:
+        prev_model.load_state_dict(get_previous_interation_state_dict())
+
+    # Compute embeddings and neighbors for original and finetuned models
+    _, _, e0 = predict(
+        prev_model,
+        dataset.unlabeled_dataloader(), 
+        scoring="none", desc="original prediction")
+    
+    _, _, e1 = predict(
+        model,
+        dataset.unlabeled_dataloader(), 
+        scoring="none", desc="finetuned prediction")
+    
+    def _run_kmeans(embeddings, _num_classes):
+        kmeans = KMeans(n_clusters=_num_classes, n_init="auto").fit(embeddings)
+        kmeans_labels = kmeans.predict(embeddings)
+        centroids = kmeans.cluster_centers_
+        closest, distances_to_centroids = vq(embeddings, centroids)
+        return kmeans_labels, distances_to_centroids
+    
+    
+    kmeans_labels_e1, distances_to_centroids_e1 = _run_kmeans(e1, num_classes*num_classes_scale)
+    kmeans_labels_e0, distances_to_centroids_e0 = _run_kmeans(e0, num_classes*num_classes_scale)
+
+    if cluster_curr:
+        kmeans_labels, distances_to_centroids = kmeans_labels_e1, distances_to_centroids_e1
+    else:
+        kmeans_labels, distances_to_centroids = kmeans_labels_e0, distances_to_centroids_e0
+        
+    kmeans_centroids = []
+    for cluster in np.unique(kmeans_labels):
+        cluster_inds = np.argwhere(kmeans_labels == cluster).ravel()
+        kmeans_centroids += [int(cluster_inds[np.argmin(distances_to_centroids[cluster_inds])])]
+    kmeans_centroids = np.array(kmeans_centroids)
+    
+    acc, mean_per_class_acc, e0_labelling = get_cluster_acc(kmeans_labels_e0, kmeans_labels_e1, return_matching=True)
+    e1_labelling = kmeans_labels_e1
+    
+    cluster_consistency_scores = []
+
+    for cluster_i in np.unique(kmeans_labels):
+        e0_cluster_ids = np.argwhere(e0_labelling == cluster_i).ravel()
+        e1_cluster_ids = np.argwhere(e1_labelling == cluster_i).ravel()
+        consistent_cluster_ids = set(e0_cluster_ids) & set(e1_cluster_ids)
+        consistency_score = len(consistent_cluster_ids) / len(e0_cluster_ids) * 100
+        
+        cluster_consistency_scores.append(consistency_score)
+
+    cluster_consistency_scores = np.array(cluster_consistency_scores)
+
+    if inverse:
+        cluster_consistency_scores = -cluster_consistency_scores
+
+    return all_ids[kmeans_centroids[np.argsort(cluster_consistency_scores)][:num_classes]]
+
 
 def calculate_umap_scores(model, dataset, almodel, num_neighbours=250, num_neighbours_umap=50, metric="cosine", load_from_prev_iter=False):
     """
@@ -143,12 +202,18 @@ def calculate_umap_scores(model, dataset, almodel, num_neighbours=250, num_neigh
     
     return scores, kmeans_finetuned, neighbors_finetuned
 
-def calculate_typi_scores(model, dataset, almodel, num_neighbours=20, metric="cosine"):
-    e1, dists_finetuned, neighbors_finetuned, kmeans_finetuned = get_neighbours(
-        model, dataset, "finetuned", num_neighbours=num_neighbours, metric=metric, return_distance=True
-    )
-    return dists_finetuned.mean(axis=-1), kmeans_finetuned, neighbors_finetuned
-
+def calculate_typi_scores(model, dataset, almodel, num_neighbours=20, metric="cosine", cluster_curr=True):
+    if cluster_curr:
+        e1, dists_finetuned, neighbors_finetuned, kmeans_finetuned = get_neighbours(
+            model, dataset, "finetuned", num_neighbours=num_neighbours, metric=metric, return_distance=True
+        )
+        return dists_finetuned.mean(axis=-1), kmeans_finetuned, neighbors_finetuned
+    else:
+        prev_model = almodel.get_lightning_module()(**almodel.get_hyperparameters())
+        e0, dists_original, neighbors_original, kmeans_original = get_neighbours(
+            prev_model, dataset, "finetuned", num_neighbours=num_neighbours, metric=metric, return_distance=True
+        )
+        return dists_original.mean(axis=-1), kmeans_original, neighbors_original
 
 class KMeansStrategy(BaseStrategy):
     """
@@ -177,6 +242,9 @@ class KMeansStrategy(BaseStrategy):
         if self.scoring == 'nn_clust':
             return calculate_nn_clust_scores(model, all_ids, dataset, almodel, self.inverse, self.cluster_curr, self.num_classes, self.num_classes_scale, self.num_neighbours)
         
+        if self.scoring == 'clust_consist':
+            return calculate_stability_clust_scores(model, all_ids, dataset, almodel, self.inverse, self.cluster_curr, self.num_classes, self.num_classes_scale, self.num_neighbours)
+ 
         def _predict_unlabeled():
             m = model if self.cluster_curr else almodel.get_lightning_module()(**almodel.get_hyperparameters())
             _, y_preds, embeddings = predict(
