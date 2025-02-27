@@ -215,8 +215,12 @@ class ALTrainer:
         self.al_datamodule.set_val_ids(list(val_ids))
 
         # select initial train ids according to coldstart strategy
-        module, hyperparams = self._get_lightning_module(len(all_train_ids))
-        train_ids = self.al_coldstart.select_ids(module(**hyperparams), self.al_datamodule)
+        self.zero_iteration_dir = self.exp_path.parent.parent / 'zero_iteration'
+        if (self.zero_iteration_dir / "train_ids.json").exists():
+            train_ids = load(self.zero_iteration_dir / "train_ids.json")
+        else:
+            module, hyperparams = self._get_lightning_module(len(all_train_ids))
+            train_ids = self.al_coldstart.select_ids(module(**hyperparams), self.al_datamodule)
 
         self.al_datamodule.set_train_ids(list(train_ids))
 
@@ -230,11 +234,9 @@ class ALTrainer:
         # TODO: it is run each time including coldstart, but further iteration can be already calculated. They are checked in the cycle
         self.setup_datamodule()
 
-        zero_iteration_dir = self.exp_path.parent.parent / 'zero_iteration'
-
         for i in tqdm(range(self.n_iter), desc="AL iteration", colour='green'):
-            curr_dir = zero_iteration_dir if i == 0 else self.exp_path / f"iter_{i}"
-            prev_dir = zero_iteration_dir if i == 1 else self.exp_path / f"iter_{i - 1}"
+            curr_dir = self.zero_iteration_dir if i == 0 else self.exp_path / f"iter_{i}"
+            prev_dir = self.zero_iteration_dir if i == 1 else self.exp_path / f"iter_{i - 1}"
             # if we already saved the selected ids of this round, the iteration is complete
             if (curr_dir / "train_ids_after_update.json").exists():
                 self.al_datamodule.set_train_ids(load(curr_dir / "train_ids_after_update.json"))
