@@ -285,14 +285,19 @@ class KMeansStrategy(BaseStrategy):
             elif not self.is_random and (self.samples_per_class == 1) and (self.scoring is None):
                 selected_cluster_inds = [cluster_inds[np.argmin(distances_to_centroids[cluster_inds])]]
             elif self.scoring == 'entropy':
-                entropy_scores = entropy(y_preds[cluster_inds])
-                selected_cluster_inds = cluster_inds[np.argsort(-entropy_scores)[:self.samples_per_class]]
+                scores = entropy(y_preds[cluster_inds])
+                if self.inverse:
+                    scores = -scores
+                if self.nms:
+                    selected_cluster_inds = cluster_inds[nms_all_points(scores, neighbors_finetuned[cluster_inds], neighbours_train, self.samples_per_class, self.num_neighbours_nms)]
+                else:
+                    selected_cluster_inds = cluster_inds[np.argsort(-scores)[:self.samples_per_class]]
             elif self.scoring == 'nn':
                 scores = nn_scores[cluster_inds]
                 if self.inverse:
                     scores = -scores # most stable
                 if self.nms:
-                    selected_cluster_inds = cluster_inds[nms_all_points(scores, neighbors_finetuned[cluster_inds], neighbours_train, self.samples_per_class, self.num_neighbours_nms)]
+                    selected_cluster_inds = cluster_inds[nms_all_points(-scores, neighbors_finetuned[cluster_inds], neighbours_train, self.samples_per_class, self.num_neighbours_nms)]
                 else:
                     selected_cluster_inds = cluster_inds[np.argsort(scores)[:self.samples_per_class]]
             elif self.scoring == 'typiclust':

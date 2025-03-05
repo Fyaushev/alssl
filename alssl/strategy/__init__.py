@@ -8,12 +8,15 @@ from .bait import BAITStrategy
 from .cal import CALStrategy
 from .cdal import CDALStrategy
 from .coreset import CoresetStrategy
+from .dcom import DCoMStrategy
 from .entropy import EntropyStrategy
 # from .alssl.neighbours_path import NeighboursPathStrategy
 from .golden_rule import GRStrategy
 from .kmeans import KMeansStrategy
 from .neighbors import NNStrategy
+from .prob_cover import ProbCoverStrategy
 from .random import RandomStrategy
+from .typiclust import TypiClustStrategy
 
 locals = locals()
 strategies = {key: locals[key] for key in locals if key.endswith('Strategy')}
