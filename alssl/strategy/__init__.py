@@ -9,6 +9,7 @@ from .cal import CALStrategy
 from .cdal import CDALStrategy
 from .coreset import CoresetStrategy
 from .dcom import DCoMStrategy
+from .embclust import EmbClustStrategy
 from .entropy import EntropyStrategy
 # from .alssl.neighbours_path import NeighboursPathStrategy
 from .golden_rule import GRStrategy
