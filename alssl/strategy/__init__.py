@@ -18,6 +18,7 @@ from .neighbors import NNStrategy
 from .prob_cover import ProbCoverStrategy
 from .random import RandomStrategy
 from .typiclust import TypiClustStrategy
+from .typistable import TypiStableStrategy
 
 locals = locals()
 strategies = {key: locals[key] for key in locals if key.endswith('Strategy')}
