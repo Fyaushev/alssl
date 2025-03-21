@@ -76,6 +76,18 @@ def calculate_clust_consist_score(features_e0, features_e1, labels, cluster_curr
     return np.array(cluster_consistency_scores)
 
 
+def calculate_clust_spread_score(features_e0, features_e1, e0_labelling, e1_labelling, cluster_ids):
+    
+    cluster_spread_scores = []
+    for cluster_i in cluster_ids:
+        e0_cluster_ids = np.argwhere(e0_labelling == cluster_i).ravel()
+        e1_cluster_ids = np.argwhere(e1_labelling == cluster_i).ravel()
+        spread_score = np.linalg.norm(features_e0[e0_cluster_ids] - features_e1[e0_cluster_ids], axis=1).mean()
+        
+        cluster_spread_scores.append(spread_score)
+    return np.array(cluster_spread_scores)
+
+
 def calculate_clust_energy_score(e0_labelling, e1_labelling, cluster_ids, energy_scores):
     cluster_energy_scores = []
     for cluster_i in cluster_ids:
@@ -195,7 +207,9 @@ class EnergyStrategy(BaseStrategy):
         energy_E1 = self.compute_potential_energy(features_e1, centroids_e1, radii_e1)
         energy_scores = energy_E0 - energy_E1
 
-        clust_energy_score = calculate_clust_energy_score(labels_e0, labels_e1, cluster_ids, energy_scores)
+        nn_scores = calculate_nn_score(features_e0, features_e1, self.K_NN, self.nnorm)
+        clust_energy_score = - calculate_clust_energy_score(labels_e0, labels_e1, cluster_ids, nn_scores)
+        clust_spread_score = calculate_clust_spread_score(features_e0, features_e1, labels_e0, labels_e1, cluster_ids)
 
         cluster_labeled_counts = np.bincount(labels[existing_indices], minlength=len(cluster_ids))
         clusters_df = pd.DataFrame({'cluster_id': cluster_ids, 'cluster_size': cluster_sizes, 'existing_count': cluster_labeled_counts,
@@ -204,7 +218,9 @@ class EnergyStrategy(BaseStrategy):
         clusters_df = clusters_df[clusters_df.cluster_size > self.MIN_CLUSTER_SIZE]
         # sort clusters by lowest number of existing samples, and then by cluster sizes (large to small)
         # clusters_df = clusters_df.sort_values(['existing_count', 'neg_cluster_size'])
-        clusters_df = clusters_df.sort_values(['existing_count', 'clust_energy_score']) # 'clust_energy_score',
+        
+        clusters_df = clusters_df[clusters_df.existing_count > 0]
+        clusters_df = clusters_df.sort_values(['neg_cluster_size' ]) # 'clust_energy_score',
         # if self.clust_consist:
         # clusters_df = clusters_df.sort_values(['clust_consist_score'], ascending=True)
         labels[existing_indices] = -1
@@ -223,7 +239,7 @@ class EnergyStrategy(BaseStrategy):
             typicality_e0 = calculate_typicality(features_e0[indices], min(self.K_NN, len(indices) // 2))
             # typicality_e1 = calculate_typicality(features_e1[indices], min(self.K_NN, len(indices) // 2))
 
-            # nn_score = calculate_nn_score(features_e0[indices], features_e1[indices], min(self.K_NN, len(indices) // 2), self.nnorm)
+            nn_score = nn_scores[indices]
             
             # if self.typinorm:
             #     typiscore = typicality_e0  / typicality_e1
@@ -231,12 +247,12 @@ class EnergyStrategy(BaseStrategy):
             #     typiscore = typicality_e0
             # typiscore = typiscore / typiscore.max()
 
-            if self.add_nn:
-                nn_score = calculate_nn_score(features_e0[indices], features_e1[indices], min(self.K_NN, len(indices) // 2), self.nnorm)
-                nn_score = nn_score / nn_score.max()
-                score = energy_score + nn_score
-            else:
-                score = typicality_e0
+            # if self.add_nn:
+            #     nn_score = calculate_nn_score(features_e0[indices], features_e1[indices], min(self.K_NN, len(indices) // 2), self.nnorm)
+            #     nn_score = nn_score / nn_score.max()
+            #     score = energy_score + nn_score
+            # else:
+            score =  nn_score / nn_score.max()
 
             idx = indices[score.argmax()]
             # nn_score = calculate_nn_score(features_e0[indices], features_e1[indices], min(self.K_NN, len(indices) // 2))
