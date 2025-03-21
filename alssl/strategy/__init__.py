@@ -10,6 +10,7 @@ from .cdal import CDALStrategy
 from .coreset import CoresetStrategy
 from .dcom import DCoMStrategy
 from .embclust import EmbClustStrategy
+from .energy import EnergyStrategy
 from .entropy import EntropyStrategy
 # from .alssl.neighbours_path import NeighboursPathStrategy
 from .golden_rule import GRStrategy
@@ -17,6 +18,7 @@ from .kmeans import KMeansStrategy
 from .neighbors import NNStrategy
 from .prob_cover import ProbCoverStrategy
 from .random import RandomStrategy
+# from .tmp_typiclust import TypiClustStStrategy
 from .typiclust import TypiClustStrategy
 from .typistable import TypiStableStrategy
 
