@@ -114,7 +114,7 @@ class EmbClustStrategy(BaseStrategy):
         # sort clusters by lowest number of existing samples, and then by cluster sizes (large to small)
         clusters_df = clusters_df.sort_values(['existing_count', 'neg_cluster_size'])
         if self.clust_consist:
-            clusters_df = clusters_df.sort_values(['clust_consist_score'], ascending=self.inverse)
+            clusters_df = clusters_df.sort_values(['clust_consist_score'], ascending=False)
         labels[existing_indices] = -1
 
         selected = []
@@ -124,6 +124,8 @@ class EmbClustStrategy(BaseStrategy):
             indices = (labels == cluster).nonzero()[0]
             # in case we have too small cluster, calculate score among half of the cluster
             nn_score = calculate_nn_score(features_e0[indices], features_e1[indices], min(self.K_NN, len(indices) // 2))
+            if self.inverse:
+                nn_score = -nn_score
             idx = indices[nn_score.argmax()]
             selected.append(idx)
             labels[idx] = -1
