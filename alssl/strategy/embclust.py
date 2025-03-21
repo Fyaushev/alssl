@@ -67,10 +67,11 @@ class EmbClustStrategy(BaseStrategy):
     MAX_NUM_CLUSTERS = 500
     K_NN = 500
 
-    def __init__(self, num_classes: int, cluster_curr: bool = False, clust_consist: bool = False):
+    def __init__(self, num_classes: int, cluster_curr: bool = False, clust_consist: bool = False, inverse: bool=False):
         self.num_classes = num_classes
         self.cluster_curr = cluster_curr
         self.clust_consist = clust_consist
+        self.inverse = inverse
     
     def select_ids(self, model: nn.Module, dataset: ALDataModule, budget: int, almodel: BaseALModel, *args) -> list:
         all_ids = np.concatenate([dataset.train_ids, np.array(dataset.get_unlabeled_ids())])
@@ -113,7 +114,7 @@ class EmbClustStrategy(BaseStrategy):
         # sort clusters by lowest number of existing samples, and then by cluster sizes (large to small)
         clusters_df = clusters_df.sort_values(['existing_count', 'neg_cluster_size'])
         if self.clust_consist:
-            clusters_df = clusters_df.sort_values(['clust_consist_score'], ascending=False)
+            clusters_df = clusters_df.sort_values(['clust_consist_score'], ascending=self.inverse)
         labels[existing_indices] = -1
 
         selected = []
