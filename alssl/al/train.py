@@ -150,7 +150,7 @@ class ALTrainer:
             name=cur_exp_name,
             entity=self.entitiy,
         )
-
+        self.random_seed, rng = fix_seed(seed=self.random_seed)
         trainer.fit(module, datamodule=self.al_datamodule)
         trainer.validate(module, datamodule=self.al_datamodule, verbose=False)
         test_metrics = trainer.test(module, datamodule=self.al_datamodule, verbose=False)
@@ -192,7 +192,7 @@ class ALTrainer:
             print('do NOT load checkpoint')
             if self.optuna_trials > 0:
                 print(f'run optuna for {self.optuna_trials} times')
-                best_learning_rate = run_optuna(self, len_train_dataloader, self.optuna_trials)
+                best_learning_rate = run_optuna(self, len_train_dataloader, self.optuna_trials, seed=self.random_seed)
                 hyperparams["learning_rate"] = best_learning_rate
             model = module(**hyperparams)
         else:

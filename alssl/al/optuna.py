@@ -1,6 +1,10 @@
+from functools import partial
+
 import lightning as L
 import optuna
 from optuna.integration import PyTorchLightningPruningCallback
+
+from .utils import fix_seed
 
 
 def get_trainer(trainer, trial):
@@ -14,12 +18,12 @@ def get_trainer(trainer, trial):
         callbacks=[PyTorchLightningPruningCallback(trial, monitor="val_acc")],
     )
 
-def run_optuna(trainer, len_train_dataloader, n_trials, pruning=True):
+def run_optuna(trainer, len_train_dataloader, n_trials, seed=42, pruning=True):
     '''
     adapted from https://github.com/optuna/optuna-examples/blob/main/pytorch/pytorch_lightning_simple.py
     '''
     
-    def objective(trial: optuna.trial.Trial, ) -> float:
+    def objective(trial: optuna.trial.Trial, seed: int) -> float:
         learning_rate = trial.suggest_float("learning_rate", 1e-6, 1e-2)
 
         # model, datamodule, trainer
@@ -33,14 +37,17 @@ def run_optuna(trainer, len_train_dataloader, n_trials, pruning=True):
         
         hyperparameters = dict(learning_rate=learning_rate,)
         trainer_.logger.log_hyperparams(hyperparameters)
+
+        seed, _ = fix_seed(seed)
         trainer_.fit(model, datamodule=datamodule)
 
         return trainer_.callback_metrics["val_acc"].item()
-    
-    pruner = optuna.pruners.MedianPruner() if pruning else optuna.pruners.NopPruner()
 
-    study = optuna.create_study(direction="maximize", pruner=pruner)
-    study.optimize(objective, n_trials=n_trials, timeout=600)
+    pruner = optuna.pruners.MedianPruner() if pruning else optuna.pruners.NopPruner()
+    sampler = optuna.samplers.TPESampler(seed=seed)
+
+    study = optuna.create_study(direction="maximize", pruner=pruner, sampler=sampler)
+    study.optimize(partial(objective, seed=seed), n_trials=n_trials, timeout=600)
 
     print("Number of finished trials: {}".format(len(study.trials)))
 
