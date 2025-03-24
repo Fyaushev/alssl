@@ -60,9 +60,11 @@ class LabelRelaxStrategy(BaseStrategy):
     SIGMA = 1
     DELTA = 1
 
-    def __init__(self, num_classes: int, cluster_curr: bool = False, mode: str = 'both'):
+    def __init__(self, num_classes: int, cluster_curr: bool = False, mode: str = 'both', inverse_score: bool = False, inverse_cluster_score: bool = False):
         self.num_classes = num_classes
         self.cluster_curr = cluster_curr
+        self.inverse_score = inverse_score
+        self.inverse_cluster_score = inverse_cluster_score
 
         assert mode in ['both', 'pull', 'push'], f'Mode is {mode}. Please choose both, pull or push.'
         self.pull_alpha, self.push_alpha = 1, 1
@@ -70,7 +72,6 @@ class LabelRelaxStrategy(BaseStrategy):
             self.push_alpha = 0
         elif mode == 'push':
             self.pull_alpha = 0
-
 
     
     def select_ids(self, model: nn.Module, dataset: ALDataModule, budget: int, almodel: BaseALModel, *args) -> list:
@@ -120,7 +121,9 @@ class LabelRelaxStrategy(BaseStrategy):
             indices = (labels == cluster).nonzero()[0]
             pull_losses, push_losses = self.calc_loss(features_e0[indices], features_e1[indices])
             score = self.pull_alpha * pull_losses + self.push_alpha * push_losses
-            top_ind, top_score = indices[score.argmax()], score.max()
+            top_ind = indices[score.argmax()] if not self.inverse_score else indices[score.argmin()]
+            top_score = score.mean() if not self.inverse_cluster_score else -1 * score.mean()
+            
             cluster_scores.append(top_score)
             cluster_selected_inds[cluster] = top_ind
 
@@ -151,6 +154,7 @@ class LabelRelaxStrategy(BaseStrategy):
     
     def calc_loss(self, t_emb, s_emb):
         t_emb, s_emb = torch.tensor(t_emb), torch.tensor(s_emb)
+        t_emb = F.normalize(t_emb, p=2, dim=1)
         s_emb = F.normalize(s_emb, p=2, dim=1)
         
         T_dist = pdist(t_emb, t_emb, False)
