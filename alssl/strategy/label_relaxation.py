@@ -101,8 +101,6 @@ class LabelRelaxStrategy(BaseStrategy):
         features_e0 = np.concatenate([features_train_e0, features_unlabeled_e0])
         features_e1 = np.concatenate([features_train_e1, features_unlabeled_e1])
 
-        pull_losses, push_losses = self.calc_loss(features_e0, features_e1)
-
         labels_e0 = kmeans(features_e0, num_clusters=num_clusters)
         labels_e1 = kmeans(features_e1, num_clusters=num_clusters)
         labels = labels_e1 if self.cluster_curr else labels_e0
@@ -115,13 +113,25 @@ class LabelRelaxStrategy(BaseStrategy):
         cluster_ids, cluster_sizes = np.unique(labels, return_counts=True)
 
         cluster_labeled_counts = np.bincount(labels[existing_indices], minlength=len(cluster_ids))
+
+        cluster_scores = []
+        cluster_selected_inds = {}
+        for cluster in cluster_ids:
+            indices = (labels == cluster).nonzero()[0]
+            pull_losses, push_losses = self.calc_loss(features_e0[indices], features_e1[indices])
+            score = self.pull_alpha * pull_losses + self.push_alpha * push_losses
+            top_ind, top_score = indices[score.argmax()], score.max()
+            cluster_scores.append(top_score)
+            cluster_selected_inds[cluster] = top_ind
+
+
         clusters_df = pd.DataFrame({'cluster_id': cluster_ids, 'cluster_size': cluster_sizes, 'existing_count': cluster_labeled_counts,
-                                    'neg_cluster_size': -1 * cluster_sizes, })
+                                    'neg_cluster_size': -1 * cluster_sizes, 'cluster_scores': cluster_scores})
         # drop too small clusters
         clusters_df = clusters_df[clusters_df.cluster_size > self.MIN_CLUSTER_SIZE]
         # sort clusters by lowest number of existing samples, and then by cluster sizes (large to small)
         clusters_df = clusters_df[clusters_df.existing_count == 0]
-        clusters_df = clusters_df.sort_values(['neg_cluster_size' ])
+        clusters_df = clusters_df.sort_values(['cluster_scores'])
 
         labels[existing_indices] = -1
 
@@ -129,12 +139,8 @@ class LabelRelaxStrategy(BaseStrategy):
 
         for i in range(budget):
             cluster = clusters_df.iloc[i % len(clusters_df)].cluster_id
-            indices = (labels == cluster).nonzero()[0]
+            idx = cluster_selected_inds[cluster]
 
-            score = self.pull_alpha * pull_losses[indices] + self.push_alpha * push_losses[indices] 
-
-            idx = indices[score.argmax()]
-            
             selected.append(idx)
             labels[idx] = -1
 
