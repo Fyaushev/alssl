@@ -64,7 +64,7 @@ class LabelRelaxStrategy(BaseStrategy):
         self.num_classes = num_classes
         self.cluster_curr = cluster_curr
         self.inverse_score = inverse_score
-        self.inverse_cluster_score = inverse_cluster_score
+        self.inverse_cluster_score = inverse_cluster_score # inverse will sort pandas df from max cluster score to min
 
         assert mode in ['both', 'pull', 'push'], f'Mode is {mode}. Please choose both, pull or push.'
         self.pull_alpha, self.push_alpha = 1, 1
@@ -119,7 +119,7 @@ class LabelRelaxStrategy(BaseStrategy):
         cluster_selected_inds = {}
         for cluster in cluster_ids:
             indices = (labels == cluster).nonzero()[0]
-            pull_losses, push_losses = self.calc_loss(features_e0[indices], features_e1[indices])
+            pull_losses, push_losses = self.calc_loss(features_e1[indices], features_e0[indices])
             score = self.pull_alpha * pull_losses + self.push_alpha * push_losses
             top_ind = indices[score.argmax()] if not self.inverse_score else indices[score.argmin()]
             top_score = score.mean() if not self.inverse_cluster_score else -1 * score.mean()
