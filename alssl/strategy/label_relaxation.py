@@ -68,9 +68,10 @@ class LabelRelaxStrategy(BaseStrategy):
         self.inverse_cluster_score = inverse_cluster_score # inverse will sort pandas df from max cluster score to min
         self.source = source
         self.mode = mode
+        self.cluster_mode = cluster_mode
 
         assert mode in ['both', 'pull', 'push', 'typi'], f'Mode is {mode}. Please choose both, pull or push.'
-        assert cluster_mode in ['both', 'pull', 'push'], f'Cluster mode is {mode}. Please choose both, pull or push.'
+        assert cluster_mode in ['both', 'pull', 'push', 'size'], f'Cluster mode is {mode}. Please choose both, pull or push.'
         self.pull_alpha, self.push_alpha = 1, 1
         if mode == 'pull':
             self.push_alpha = 0
@@ -126,7 +127,7 @@ class LabelRelaxStrategy(BaseStrategy):
 
         cluster_scores = []
         cluster_selected_inds = {}
-        for cluster in cluster_ids:
+        for i, cluster in enumerate(cluster_ids):
             indices = (labels == cluster).nonzero()[0]
             if self.source == 'e0':
                 pull_losses, push_losses = self.calc_loss(features_e1[indices], features_e0[indices])
@@ -140,7 +141,8 @@ class LabelRelaxStrategy(BaseStrategy):
             cluster_score = self.cluster_pull_alpha * pull_losses + self.cluster_push_alpha * push_losses
             top_ind = indices[score.argmax()] if not self.inverse_score else indices[score.argmin()]
             top_score = cluster_score.min() if not self.inverse_cluster_score else -1 * cluster_score.min()
-            
+            if self.cluster_mode == 'size':
+                top_score = -cluster_sizes[i]
             cluster_scores.append(top_score)
             cluster_selected_inds[cluster] = top_ind
 
