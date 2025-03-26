@@ -16,6 +16,7 @@ from torch.autograd import Variable
 from ..data.base import ALDataModule
 from ..model.base import BaseALModel
 from .base import BaseStrategy
+from .typiclust import calculate_typicality
 from .utils import predict
 
 
@@ -60,13 +61,15 @@ class LabelRelaxStrategy(BaseStrategy):
     SIGMA = 1
     DELTA = 1
 
-    def __init__(self, num_classes: int, cluster_curr: bool = False, mode: str = 'both', cluster_mode: str = 'both', inverse_score: bool = False, inverse_cluster_score: bool = False):
+    def __init__(self, num_classes: int, cluster_curr: bool = False, mode: str = 'both', cluster_mode: str = 'both', inverse_score: bool = False, inverse_cluster_score: bool = False, source='e0'):
         self.num_classes = num_classes
         self.cluster_curr = cluster_curr
         self.inverse_score = inverse_score
         self.inverse_cluster_score = inverse_cluster_score # inverse will sort pandas df from max cluster score to min
+        self.source = source
+        self.mode = mode
 
-        assert mode in ['both', 'pull', 'push'], f'Mode is {mode}. Please choose both, pull or push.'
+        assert mode in ['both', 'pull', 'push', 'typi'], f'Mode is {mode}. Please choose both, pull or push.'
         assert cluster_mode in ['both', 'pull', 'push'], f'Cluster mode is {mode}. Please choose both, pull or push.'
         self.pull_alpha, self.push_alpha = 1, 1
         if mode == 'pull':
@@ -125,8 +128,15 @@ class LabelRelaxStrategy(BaseStrategy):
         cluster_selected_inds = {}
         for cluster in cluster_ids:
             indices = (labels == cluster).nonzero()[0]
-            pull_losses, push_losses = self.calc_loss(features_e1[indices], features_e0[indices])
-            score = self.pull_alpha * pull_losses + self.push_alpha * push_losses
+            if self.source == 'e0':
+                pull_losses, push_losses = self.calc_loss(features_e1[indices], features_e0[indices])
+            else:
+                pull_losses, push_losses = self.calc_loss(features_e0[indices], features_e1[indices])
+            if self.mode !='typi':
+                score = self.pull_alpha * pull_losses + self.push_alpha * push_losses
+            else:
+                score = calculate_typicality(features_e0[indices], min(self.K_NN, len(indices) // 2))
+
             cluster_score = self.cluster_pull_alpha * pull_losses + self.cluster_push_alpha * push_losses
             top_ind = indices[score.argmax()] if not self.inverse_score else indices[score.argmin()]
             top_score = cluster_score.min() if not self.inverse_cluster_score else -1 * cluster_score.min()
