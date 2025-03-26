@@ -60,18 +60,24 @@ class LabelRelaxStrategy(BaseStrategy):
     SIGMA = 1
     DELTA = 1
 
-    def __init__(self, num_classes: int, cluster_curr: bool = False, mode: str = 'both', inverse_score: bool = False, inverse_cluster_score: bool = False):
+    def __init__(self, num_classes: int, cluster_curr: bool = False, mode: str = 'both', cluster_mode: str = 'both', inverse_score: bool = False, inverse_cluster_score: bool = False):
         self.num_classes = num_classes
         self.cluster_curr = cluster_curr
         self.inverse_score = inverse_score
         self.inverse_cluster_score = inverse_cluster_score # inverse will sort pandas df from max cluster score to min
 
         assert mode in ['both', 'pull', 'push'], f'Mode is {mode}. Please choose both, pull or push.'
+        assert cluster_mode in ['both', 'pull', 'push'], f'Cluster mode is {mode}. Please choose both, pull or push.'
         self.pull_alpha, self.push_alpha = 1, 1
         if mode == 'pull':
             self.push_alpha = 0
         elif mode == 'push':
             self.pull_alpha = 0
+        self.cluster_pull_alpha, self.cluster_push_alpha = 1, 1
+        if mode == 'pull':
+            self.cluster_push_alpha = 0
+        elif mode == 'push':
+            self.cluster_pull_alpha = 0
 
     
     def select_ids(self, model: nn.Module, dataset: ALDataModule, budget: int, almodel: BaseALModel, *args) -> list:
@@ -121,8 +127,9 @@ class LabelRelaxStrategy(BaseStrategy):
             indices = (labels == cluster).nonzero()[0]
             pull_losses, push_losses = self.calc_loss(features_e1[indices], features_e0[indices])
             score = self.pull_alpha * pull_losses + self.push_alpha * push_losses
+            cluster_score = self.cluster_pull_alpha * pull_losses + self.cluster_push_alpha * push_losses
             top_ind = indices[score.argmax()] if not self.inverse_score else indices[score.argmin()]
-            top_score = score.mean() if not self.inverse_cluster_score else -1 * score.mean()
+            top_score = cluster_score.min() if not self.inverse_cluster_score else -1 * cluster_score.min()
             
             cluster_scores.append(top_score)
             cluster_selected_inds[cluster] = top_ind
