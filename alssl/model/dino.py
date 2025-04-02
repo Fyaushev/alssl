@@ -1,7 +1,8 @@
 import lightning as L
 import torch
 from torch import nn
-from torch.optim.lr_scheduler import MultiStepLR, OneCycleLR, ReduceLROnPlateau
+from torch.optim.lr_scheduler import (MultiStepLR, OneCycleLR,
+                                      ReduceLROnPlateau, StepLR)
 from torchmetrics.functional import accuracy, average_precision
 from torchmetrics.segmentation import MeanIoU
 from transformers import AutoModel
@@ -17,7 +18,12 @@ class DinoClassifier(nn.Module):
         self.use_n_blocks = use_n_blocks
         self.backbone = torch.hub.load("facebookresearch/dinov2", "dinov2_vitb14_lc").backbone
         # self.backbone = AutoModel.from_pretrained("facebook/dinov2-base")
-        self.classifier = nn.Linear(768, num_classes)
+        # self.classifier = nn.Linear(768, num_classes)
+        self.classifier = nn.Sequential(
+          nn.Linear(768, 768),
+          nn.ReLU(),
+          nn.Linear(768, num_classes),
+        )
 
         for param in self.backbone.parameters():
             param.requires_grad_(False)
@@ -57,7 +63,7 @@ class LightningDinoClassifier(L.LightningModule):
         scheduler_kwargs={},
         optimizer_kwargs={},
         include_param_loss: bool = True,
-        param_loss_beta: float = 0.01,
+        param_loss_beta: float = 1,
         *args
     ):
         super().__init__()
@@ -89,6 +95,7 @@ class LightningDinoClassifier(L.LightningModule):
         # )
         # "monitor": "train_loss"
         scheduler = OneCycleLR(optimizer, **self.scheduler_kwargs)
+        # scheduler = StepLR(optimizer, step_size=10, gamma=0.1)
         # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size = 10)
 
         return [optimizer], [
@@ -102,7 +109,7 @@ class LightningDinoClassifier(L.LightningModule):
         loss = self.criterion(logits, labels)
         self.log("train_loss_criterion", loss, prog_bar=True, on_epoch=True, on_step=False)
         
-        # code from https://github.com/holyseven/TransferLearningClassification/blob/master/model/network_base.py
+        # code from https://github.com/thuml/Transfer-Learning-Library/blob/master/tllib/regularization/delta.py
         if self.include_param_loss:
             param_loss = 0.0
             for name, param in self.model.named_parameters():
