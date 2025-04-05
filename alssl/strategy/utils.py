@@ -9,9 +9,13 @@ from tqdm import tqdm
 def move_to_np(tensor: torch.Tensor):
     return tensor.cpu().numpy()
 
-def _init_arrays(num_samples, embedding_size, output_size):
-    ys = np.empty((num_samples,))
-    y_preds = np.empty((num_samples, output_size))
+def _init_arrays(num_samples, embedding_size, output_shape, is_segmentation):
+    if not is_segmentation:
+        ys = np.empty((num_samples,))
+        y_preds = np.empty((num_samples, output_shape[-1]))
+    else:
+        ys = np.empty((num_samples, output_shape[-2], output_shape[-1]))
+        y_preds = np.empty((num_samples, output_shape[-3], output_shape[-2], output_shape[-1]))
     all_embeddings = np.empty((num_samples, embedding_size))
     return ys, y_preds, all_embeddings
 
@@ -46,12 +50,17 @@ def predict(
             else:
                 if sample_idx == 0:
                     num_samples = int(batch_size * len(dataloader))
-                    embedding_size = embeddings.shape[-1]
-                    output_size = y_pred.shape[-1]
+                    embedding_size = embeddings.shape[1]
+                    output_shape = y_pred.shape
 
-                    ys, y_preds, all_embeddings = _init_arrays(num_samples, embedding_size, output_size)
+                    is_segmentation = len(output_shape) > 2
+
+                    ys, y_preds, all_embeddings = _init_arrays(num_samples, embedding_size, output_shape, is_segmentation)
 
                 y_np = move_to_np(y)
+
+                if len(embeddings.shape) > 2:
+                    embeddings = embeddings.mean(-2).mean(-1)
 
                 ys[sample_idx:sample_idx + batch_size] = y_np
                 y_preds[sample_idx:sample_idx + batch_size, :] = y_pred

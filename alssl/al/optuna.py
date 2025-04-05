@@ -40,8 +40,10 @@ def run_optuna(trainer, len_train_dataloader, n_trials, seed=42, pruning=True):
 
         seed, _ = fix_seed(seed)
         trainer_.fit(model, datamodule=datamodule)
-
-        return trainer_.callback_metrics["val_acc"].item()
+        try:
+            return trainer_.callback_metrics["val_acc"].item()
+        except KeyError:
+            return trainer_.callback_metrics["val_miou"].item()
 
     pruner = optuna.pruners.MedianPruner() if pruning else optuna.pruners.NopPruner()
     sampler = optuna.samplers.TPESampler(seed=seed)
