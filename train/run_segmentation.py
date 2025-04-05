@@ -105,6 +105,8 @@ def run_exp(config: DictConfig) -> None:
         config.coldstart.coldstart_params.random_seed = config.training.random_seed
         # change for segmentation tasks
         config.coldstart.coldstart_params.num_classes = initial_train_size
+
+        config.strategy.strategy_params.num_classes = budget_size
     
     # Initialize the Active Learning trainer
     trainer = ALTrainer(
