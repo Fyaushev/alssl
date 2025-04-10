@@ -109,7 +109,7 @@ def run_exp(config: DictConfig) -> None:
         exp_name += '_frozen'
         coldstart_name += '_frozen'
     
-    exp_root_path = root_path / (str(config.strategy.initial_train_percent) + '_' + coldstart_name) / str(config.training.random_seed) 
+    exp_root_path = root_path / (str(config.strategy.initial_train_percent) + '_' + coldstart_name + '_' + config.training.param_loss_beta) / str(config.training.random_seed) 
     
     if config.strategy.budget_per_class > 0:
         exp_root_path = exp_root_path / str(config.strategy.budget_per_class)
