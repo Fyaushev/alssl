@@ -13,6 +13,7 @@ from alssl.model.base import BaseALModel
 from alssl.model.dino import LightningDinoClassifier
 from alssl.model.effnet_b0 import LightningEffNetB0Classifier
 from alssl.model.lvm_med_resnet import LightningLMVMedResnetClassifier
+from alssl.model.lvm_med_vit import LightningLMVMedVitClassifier
 from alssl.model.mae import LightningMAEClassifier
 from alssl.model.regnet_x_400mf import LightningRegNetX400MFClassifier
 from alssl.model.resnet18 import LightningResnet18Classifier
@@ -66,6 +67,8 @@ def run_exp(config: DictConfig) -> None:
                 return LightningResnet18Classifier
             elif config.training.backbone == 'lvm_med_resnet':
                 return LightningLMVMedResnetClassifier
+            elif config.training.backbone == 'lvm_med_vit':
+                return LightningLMVMedVitClassifier
             elif config.training.backbone == 'mae':
                 return LightningMAEClassifier
         def get_hyperparameters(self):
@@ -77,6 +80,7 @@ def run_exp(config: DictConfig) -> None:
                 'scheduler_kwargs':scheduler_kwargs,
                 'include_param_loss':config.training.include_param_loss,
                 'root':config.experiment.data_path,
+                'param_loss_beta': config.training.param_loss_beta,
             }
 
     model = Model()

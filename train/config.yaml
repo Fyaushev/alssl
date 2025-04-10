@@ -24,6 +24,7 @@ training:
   finetune: False
   optuna_trials: 25
   include_param_loss: False
+  param_loss_beta: 1
   blocks_to_retrain: 1
   batch_size: 100
   batch_size_prediction: 500
