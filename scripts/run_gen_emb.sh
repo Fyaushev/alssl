@@ -1,0 +1,1 @@
+python gen_embeddings.py experiment.dataset=bloodmnist training.random_seed=0 'experiment.exp_names=[TypiClustStrategy_num_-8_ploss,LabelRelaxStrategy_num_-8_mode-typi_clus-pull_clus-False_inve-False_inve-True_ploss]'
