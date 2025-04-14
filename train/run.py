@@ -13,7 +13,7 @@ from alssl.model.base import BaseALModel
 from alssl.model.dino import LightningDinoClassifier
 from alssl.model.effnet_b0 import LightningEffNetB0Classifier
 from alssl.model.lvm_med_resnet import LightningLMVMedResnetClassifier
-from alssl.model.lvm_med_vit import LightningLMVMedVitClassifier
+# from alssl.model.lvm_med_vit import LightningLMVMedVitClassifier
 from alssl.model.mae import LightningMAEClassifier
 from alssl.model.regnet_x_400mf import LightningRegNetX400MFClassifier
 from alssl.model.resnet18 import LightningResnet18Classifier
@@ -67,8 +67,8 @@ def run_exp(config: DictConfig) -> None:
                 return LightningResnet18Classifier
             elif config.training.backbone == 'lvm_med_resnet':
                 return LightningLMVMedResnetClassifier
-            elif config.training.backbone == 'lvm_med_vit':
-                return LightningLMVMedVitClassifier
+            # elif config.training.backbone == 'lvm_med_vit':
+            #     return LightningLMVMedVitClassifier
             elif config.training.backbone == 'mae':
                 return LightningMAEClassifier
         def get_hyperparameters(self):
@@ -108,8 +108,11 @@ def run_exp(config: DictConfig) -> None:
     if config.training.blocks_to_retrain == 0:
         exp_name += '_frozen'
         coldstart_name += '_frozen'
+    if config.training.finetune:
+        exp_name += '_finetune'
+        coldstart_name += '_finetune'
     
-    exp_root_path = root_path / (str(config.strategy.initial_train_percent) + '_' + coldstart_name + '_' + config.training.param_loss_beta) / str(config.training.random_seed) 
+    exp_root_path = root_path / (str(config.strategy.initial_train_percent) + '_' + coldstart_name) / str(config.training.random_seed) 
     
     if config.strategy.budget_per_class > 0:
         exp_root_path = exp_root_path / str(config.strategy.budget_per_class)
