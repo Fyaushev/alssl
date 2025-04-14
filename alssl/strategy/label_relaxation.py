@@ -9,6 +9,8 @@ from torch import nn
 
 from ..data.base import ALDataModule
 from ..model.base import BaseALModel
+from .alssl.utils import (get_current_iteration,
+                          get_previous_interation_state_dict)
 from .base import BaseStrategy
 from .typiclust import calculate_typicality
 from .utils import predict
@@ -55,7 +57,7 @@ class LabelRelaxStrategy(BaseStrategy):
     SIGMA = 1
     DELTA = 1
 
-    def __init__(self, num_classes: int, cluster_curr: bool = False, mode: str = 'both', cluster_mode: str = 'both', inverse_score: bool = False, inverse_cluster_score: bool = False, source='e0'):
+    def __init__(self, num_classes: int, cluster_curr: bool = False, mode: str = 'both', cluster_mode: str = 'both', inverse_score: bool = False, inverse_cluster_score: bool = False, source='e0', load_from_prev_iter=False):
         self.num_classes = num_classes
         self.cluster_curr = cluster_curr
         self.inverse_score = inverse_score
@@ -63,6 +65,7 @@ class LabelRelaxStrategy(BaseStrategy):
         self.source = source
         self.mode = mode
         self.cluster_mode = cluster_mode
+        self.load_from_prev_iter = load_from_prev_iter
 
         assert mode in ['both', 'pull', 'push', 'typi', 'combined_pull', 'combined_push', 'proba_', 'adj_', 'emb_norm'], f'Mode is {mode}. Please choose both, pull or push.'
         assert cluster_mode in ['both', 'pull', 'push', 'size'], f'Cluster mode is {mode}. Please choose both, pull or push.'
@@ -83,6 +86,9 @@ class LabelRelaxStrategy(BaseStrategy):
         num_clusters = min(len(dataset.train_ids) + self.num_classes, self.MAX_NUM_CLUSTERS)
 
         m = almodel.get_lightning_module()(**almodel.get_hyperparameters())
+        if get_current_iteration() and self.load_from_prev_iter:
+            m.load_state_dict(get_previous_interation_state_dict())
+
         _, _, features_unlabeled_e0 = predict(
             m,
             dataset.unlabeled_dataloader(), 
