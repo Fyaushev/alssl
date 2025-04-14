@@ -64,7 +64,7 @@ class LabelRelaxStrategy(BaseStrategy):
         self.mode = mode
         self.cluster_mode = cluster_mode
 
-        assert mode in ['both', 'pull', 'push', 'typi', 'combined_pull', 'combined_push', 'proba_', 'adj_'], f'Mode is {mode}. Please choose both, pull or push.'
+        assert mode in ['both', 'pull', 'push', 'typi', 'combined_pull', 'combined_push', 'proba_', 'adj_', 'emb_norm'], f'Mode is {mode}. Please choose both, pull or push.'
         assert cluster_mode in ['both', 'pull', 'push', 'size'], f'Cluster mode is {mode}. Please choose both, pull or push.'
         self.pull_alpha, self.push_alpha = 1, 1
         if mode == 'pull':
@@ -149,8 +149,8 @@ class LabelRelaxStrategy(BaseStrategy):
                 push_losses.append(push_loss)
             pull_losses, push_losses = np.array(pull_losses), np.array(push_losses)
             
-            pull_losses = (pull_losses - np.min(pull_losses)) / (np.max(pull_losses) - np.min(pull_losses) + 1e-8)
-            push_losses = (push_losses - np.min(push_losses)) / (np.max(push_losses) - np.min(push_losses) + 1e-8)
+            pull_losses_norm = (pull_losses - np.min(pull_losses)) / (np.max(pull_losses) - np.min(pull_losses) + 1e-8)
+            push_losses_norm = (push_losses - np.min(push_losses)) / (np.max(push_losses) - np.min(push_losses) + 1e-8)
 
             cluster_typiscores = calculate_typicality(features_e0[indices], min(self.K_NN, len(indices) // 2))
             cluster_typiscores = (cluster_typiscores - np.min(cluster_typiscores)) / (np.max(cluster_typiscores) - np.min(cluster_typiscores) + 1e-8)
@@ -176,7 +176,8 @@ class LabelRelaxStrategy(BaseStrategy):
             
             elif 'adj' in self.mode:
                 score = cluster_typiscores - (self.pull_alpha * pull_losses + self.push_alpha * push_losses) * clusters_loss_mean[cluster] 
-                    
+            elif self.mode == 'emb_norm':
+                score = np.linalg.norm(features_e0[indices], -1)   
             elif self.mode !='typi':
                 score = self.pull_alpha * pull_losses + self.push_alpha * push_losses
             else:
@@ -184,7 +185,7 @@ class LabelRelaxStrategy(BaseStrategy):
 
             cluster_score = self.cluster_pull_alpha * pull_losses + self.cluster_push_alpha * push_losses
             top_ind = indices[score.argmax()] if not self.inverse_score else indices[score.argmin()]
-            top_score = cluster_score.min() if not self.inverse_cluster_score else -1 * cluster_score.min()
+            top_score = cluster_score.mean() if not self.inverse_cluster_score else -1 * cluster_score.mean()
             if self.cluster_mode == 'size':
                 top_score = -cluster_sizes[i]
             cluster_scores.append(top_score)
