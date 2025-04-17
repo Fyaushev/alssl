@@ -184,6 +184,9 @@ def run_exp(config: DictConfig) -> None:
     if config.training.blocks_to_retrain == 0:
         exp_name += '_frozen'
         coldstart_name += '_frozen'
+    if config.training.finetune:
+        exp_name += '_finetune'
+        coldstart_name += '_finetune'
     
     exp_root_path = root_path / (str(config.strategy.initial_train_percent) + '_' + coldstart_name) / str(config.training.random_seed) 
     
@@ -208,9 +211,11 @@ def run_exp(config: DictConfig) -> None:
 
     for exp_name in exp_names:
         print(exp_root_path / exp_name)
-
-        n_iter = max([int(i.stem.split('_')[-1]) for i in (exp_root_path / exp_name).glob('iter_*')]) + 1
-    
+        try:
+            n_iter = max([int(i.stem.split('_')[-1]) for i in (exp_root_path / exp_name).glob('iter_*')]) + 1
+        except ValueError:
+            print('Warning: No iteration found')
+            continue
         # Initialize the Active Learning trainer
         trainer = SavingALTrainer(
             exp_root_path=exp_root_path,
