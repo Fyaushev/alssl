@@ -27,13 +27,13 @@ def get_num_classes():
 
 
 def get_dataset(
-    subset="train", data_path=Path("/shared/projects/active_learning/")
+    subset="train", data_path=Path("/shared/projects/active_learning/stanford_cars")
 ):
     assert subset in ["train", "test"]
     transform = transform_train if subset == "train" else transform_test
     return (
         torchvision.datasets.StanfordCars(
-            root=data_path, split=subset, #download=True
+            root=data_path.parent, split=subset, #download=True
         ),
         transform,
     )
