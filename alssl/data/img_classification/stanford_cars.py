@@ -31,9 +31,11 @@ def get_dataset(
 ):
     assert subset in ["train", "test"]
     transform = transform_train if subset == "train" else transform_test
-    return (
-        torchvision.datasets.StanfordCars(
+    ds = torchvision.datasets.StanfordCars(
             root=data_path.parent, split=subset, #download=True
-        ),
+        )
+    ds.targets = [i[1] for i in ds._samples]
+    return (
+        ds,
         transform,
     )
