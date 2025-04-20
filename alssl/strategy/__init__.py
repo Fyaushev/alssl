@@ -16,11 +16,13 @@ from .entropy import EntropyStrategy
 from .golden_rule import GRStrategy
 from .kmeans import KMeansStrategy
 from .label_relaxation import LabelRelaxStrategy
+from .label_relaxation_size import LabelRelaxSizeStrategy
 from .neighbors import NNStrategy
 from .prob_cover import ProbCoverStrategy
 from .random import RandomStrategy
 # from .tmp_typiclust import TypiClustStStrategy
 from .typiclust import TypiClustStrategy
+from .typinorm import TypiNormStrategy
 from .typistable import TypiStableStrategy
 
 locals = locals()
