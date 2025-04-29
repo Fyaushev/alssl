@@ -187,16 +187,22 @@ class ALTrainer:
             self.al_datamodule.set_train_ids(load(train_ids_path))
 
         module, hyperparams = self._get_lightning_module(len_train_dataloader)
+
+        def _run_optuna(len_train_dataloader, hyperparams):
+            print(f'run optuna for {self.optuna_trials} times')
+            best_learning_rate = run_optuna(self, len_train_dataloader, self.optuna_trials, seed=self.random_seed)
+            hyperparams["learning_rate"] = best_learning_rate
+            return hyperparams
         
         if checkpoint_path is None:
             print('do NOT load checkpoint')
             if self.optuna_trials > 0:
-                print(f'run optuna for {self.optuna_trials} times')
-                best_learning_rate = run_optuna(self, len_train_dataloader, self.optuna_trials, seed=self.random_seed)
-                hyperparams["learning_rate"] = best_learning_rate
+                hyperparams = _run_optuna(len_train_dataloader, hyperparams)
             model = module(**hyperparams)
         else:
             print('DO load checkpoint')
+            if self.finetune and self.optuna_trials > 0 and not is_fully_trained:
+                hyperparams = _run_optuna(len_train_dataloader, hyperparams)
             model = module.load_from_checkpoint(checkpoint_path, **hyperparams)
         print(checkpoint_path)
         return model, is_fully_trained
