@@ -19,7 +19,7 @@ class DinoLoRaSegmentation(nn.Module):
             encoder=encoder,
             r=3, # These are the same settings used in training
             emb_dim=768, # The base ViT embedding dim
-            img_dim=(700, 700), # For ease of use rescaling to a valid patch dimension 
+            img_dim=(490, 490), # For ease of use rescaling to a valid patch dimension 
             n_classes=num_classes, 
             use_fpn=True,
             use_lora=True,
