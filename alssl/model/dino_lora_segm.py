@@ -55,6 +55,7 @@ class LightningDinoLoRaSegmentation(L.LightningModule):
         optimizer_kwargs={},
         include_param_loss: bool = False,
         param_loss_beta: float = 1,
+        binary: bool = False,
         *args
     ):
         super().__init__()
@@ -65,10 +66,11 @@ class LightningDinoLoRaSegmentation(L.LightningModule):
         self.validation_losses = []
         self.criterion = nn.CrossEntropyLoss(ignore_index=255)
         self.dice_loss_fn = DiceLoss()
-        self.miou = MeanIoU(num_classes=num_classes, per_class=True, include_background=True, input_format='index')
+        # self.miou = MeanIoU(num_classes=num_classes, per_class=True, include_background=True, input_format='index')
         self.num_classes = num_classes
         self.scheduler_kwargs = scheduler_kwargs
         self.optimizer_kwargs = optimizer_kwargs
+        self.binary = binary
 
     def forward(self, x):
         return self.model(x)
@@ -104,20 +106,22 @@ class LightningDinoLoRaSegmentation(L.LightningModule):
         logits, embeddings = self(images)
 
         # labels = self.resize_masks(labels, logits)
-
-        # loss = self.criterion(logits, labels)
-        pred_probs = nn.functional.softmax(logits, dim=1)
-        dice_loss_val = self.dice_loss_fn(pred_probs[:, 1, :, :], labels.float())
-        loss = dice_loss_val
+        if not self.binary:
+            loss = self.criterion(logits, labels)
+        else:
+            pred_probs = nn.functional.softmax(logits, dim=1)
+            loss = self.dice_loss_fn(pred_probs[:, 1, :, :], labels.float())
 
         self.log("train_loss_criterion", loss, prog_bar=True, on_epoch=True, on_step=False)
 
         miou = self._calculate_miou(logits, labels)
-        dice = self._calculate_dice(logits, labels)
+        if self.binary:
+            dice = self._calculate_dice(logits, labels)
 
         self.log("train_loss", loss, prog_bar=True, on_epoch=True, on_step=False)
         self.log("train_miou", miou, prog_bar=True, on_epoch=True, on_step=False)
-        self.log("train_dice", dice, prog_bar=True, on_epoch=True, on_step=False)
+        if self.binary:
+            self.log("train_dice", dice, prog_bar=True, on_epoch=True, on_step=False)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -129,11 +133,13 @@ class LightningDinoLoRaSegmentation(L.LightningModule):
 
         loss = self.criterion(logits, labels)
         miou = self._calculate_miou(logits, labels)
-        dice = self._calculate_dice(logits, labels)
+        if self.binary:
+            dice = self._calculate_dice(logits, labels)
 
         self.log("val_loss", loss, prog_bar=True, on_epoch=True, on_step=False)
         self.log("val_miou", miou, prog_bar=True, on_epoch=True, on_step=False)
-        self.log("val_dice", dice, prog_bar=True, on_epoch=True, on_step=False)
+        if self.binary:
+            self.log("val_dice", dice, prog_bar=True, on_epoch=True, on_step=False)
         return loss
 
     def test_step(self, batch, batch_idx):
@@ -144,10 +150,12 @@ class LightningDinoLoRaSegmentation(L.LightningModule):
         labels = self.resize_masks(labels, logits)
 
         miou = self._calculate_miou(logits, labels)
-        dice = self._calculate_dice(logits, labels)
+        if self.binary:
+            dice = self._calculate_dice(logits, labels)
 
         self.log("test_miou", miou, on_epoch=True, on_step=False)
-        self.log("test_dice", dice, on_epoch=True, on_step=False)
+        if self.binary:
+            self.log("test_dice", dice, on_epoch=True, on_step=False)
 
     def _calculate_dice(self, logits, masks):
         return dice(
