@@ -10,12 +10,12 @@ from .base import BaseStrategy
 from .utils import predict
 
 
-def furthest_first(X, X_set, n):
+def furthest_first(X, X_set, n, metric="euclidean"):
     m = np.shape(X)[0]
     if np.shape(X_set)[0] == 0:
         min_dist = np.tile(float("inf"), m)
     else:
-        dist_ctr = pairwise_distances(X, X_set)
+        dist_ctr = pairwise_distances(X, X_set, metric)
         min_dist = np.amin(dist_ctr, axis=1)
 
     idxs = []

@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import numpy as np
 import pandas as pd
 import torch
@@ -57,7 +59,7 @@ class LabelRelaxStrategy(BaseStrategy):
     SIGMA = 1
     DELTA = 1
 
-    def __init__(self, num_classes: int, cluster_curr: bool = False, mode: str = 'both', cluster_mode: str = 'both', inverse_score: bool = False, inverse_cluster_score: bool = False, source='e0', load_from_prev_iter=False):
+    def __init__(self, num_classes: int, cluster_curr: bool = False, mode: str = 'both', cluster_mode: str = 'both', inverse_score: bool = False, inverse_cluster_score: bool = False, source='e0', load_from_prev_iter=False, num_samples_per_cluster=50):
         self.num_classes = num_classes
         self.cluster_curr = cluster_curr
         self.inverse_score = inverse_score
@@ -66,6 +68,7 @@ class LabelRelaxStrategy(BaseStrategy):
         self.mode = mode
         self.cluster_mode = cluster_mode
         self.load_from_prev_iter = load_from_prev_iter
+        self.num_samples_per_cluster = num_samples_per_cluster
 
         assert mode in ['both', 'pull', 'push', 'typi', 'combined_pull', 'combined_push', 'proba_', 'adj_', 'emb_norm'], f'Mode is {mode}. Please choose both, pull or push.'
         assert cluster_mode in ['both', 'pull', 'push', 'size'], f'Cluster mode is {mode}. Please choose both, pull or push.'
@@ -126,9 +129,9 @@ class LabelRelaxStrategy(BaseStrategy):
         cluster_labeled_counts = np.bincount(labels[existing_indices], minlength=len(cluster_ids))
 
         if self.source == 'e0':
-            cluster_losses = calc_loss(features_e1, features_e0, torch.tensor(labels))
+            cluster_losses = calc_loss(features_e1, features_e0, torch.tensor(labels), num_samples_per_cluster=self.num_samples_per_cluster)
         else:
-            cluster_losses = calc_loss(features_e0, features_e1, torch.tensor(labels))
+            cluster_losses = calc_loss(features_e0, features_e1, torch.tensor(labels), num_samples_per_cluster=self.num_samples_per_cluster)
 
         clusters_loss_mean = {}
         for i, cluster in enumerate(cluster_ids):
@@ -202,6 +205,7 @@ class LabelRelaxStrategy(BaseStrategy):
                                     'cluster_scores': cluster_scores})
         # drop too small clusters
         clusters_df = clusters_df[clusters_df.cluster_size > self.MIN_CLUSTER_SIZE]
+        cluster_df_notfiltered = deepcopy(clusters_df.sort_values(['cluster_scores']))
         # sort clusters by lowest number of existing samples, and then by cluster sizes (large to small)
         clusters_df = clusters_df[clusters_df.existing_count == 0]
         clusters_df = clusters_df.sort_values(['cluster_scores'])
@@ -211,8 +215,16 @@ class LabelRelaxStrategy(BaseStrategy):
         selected = []
 
         for i in range(budget):
-            cluster = clusters_df.iloc[i % len(clusters_df)].cluster_id
-            idx = cluster_selected_inds[cluster]
+            if not len(clusters_df):
+                cluster = cluster_df_notfiltered.iloc[i % len(cluster_df_notfiltered)].cluster_id
+                indices = (labels == cluster).nonzero()[0]
+                rel_feats = features_e0[indices]
+                # in case we have too small cluster, calculate density among half of the cluster
+                typicality = calculate_typicality(rel_feats, min(self.K_NN, len(indices) // 2))
+                idx = indices[typicality.argmax()]
+            else:
+                cluster = clusters_df.iloc[i % len(clusters_df)].cluster_id
+                idx = cluster_selected_inds[cluster]
 
             selected.append(idx)
             labels[idx] = -1
@@ -223,7 +235,7 @@ class LabelRelaxStrategy(BaseStrategy):
         return all_ids[selected]
 
 
-def sample_from_clusters(labels, num_samples_per_cluster=50):
+def sample_from_clusters(labels, num_samples_per_cluster):
     """Samples a fixed number of embeddings from each cluster."""
     sampled_indices = []
     unique_clusters = torch.unique(labels)
