@@ -16,8 +16,11 @@ class RandomColdStart(BaseColdStart):
         self.num_classes = num_classes
 
     def select_ids(self, model: nn.Module, dataset: ALDataModule,) -> list:
+        ids = dataset.get_unlabeled_ids()
+        if len(ids) <= self.initial_train_size:
+            return ids
         train_ids, _ = train_test_split(
-                    dataset.get_unlabeled_ids(),
+                    ids,
                     train_size=self.initial_train_size,
                     random_state=self.random_seed,
                     stratify=None,
