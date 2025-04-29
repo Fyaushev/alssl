@@ -122,6 +122,6 @@ def get_dataset(
 ):
     assert subset in ["train", "test"]
     transform = transform_train if subset == "train" else transform_test
-    ds = PascalVOCDataset(root=data_path, image_set=subset)
+    ds = PascalVOCDataset(root=data_path, image_set=subset if subset == "train" else "val")
     return ds, transform
 
