@@ -78,6 +78,7 @@ class PascalVOCDataset(VOCSegmentation):
         self.n_classes = 21
         self.transform = transform
         self.use_index_label = use_index_label
+        self.targets = np.ones(len(self.images))
 
     @staticmethod
     def _convert_to_segmentation_mask(
