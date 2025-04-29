@@ -7,9 +7,9 @@ experiment:
 strategy:
   strategy_name: RandomStrategy
   strategy_params: {}
-  budget_percent: 5
+  budget_percent: 1
   budget_per_class: 0
-  initial_train_percent: 5
+  initial_train_percent: 1
   initial_val_size: 50
   n_iter: 2
 
@@ -19,15 +19,19 @@ coldstart:
     samples_per_class: 1 #3
     is_random: False
 
+# coldstart:
+#   coldstart_name: RandomColdStart
+#   coldstart_params: {}
+
 training:
-  backbone: swin
+  backbone: dino
   finetune: False
-  optuna_trials: 25
+  optuna_trials: 0
   include_param_loss: True
   blocks_to_retrain: 1
-  batch_size: 100
-  batch_size_prediction: 500
-  num_epochs: 50
+  batch_size: 3
+  batch_size_prediction: 3
+  num_epochs: 30
   learning_rate: 2e-6
   random_seed: 1
   num_workers: 12

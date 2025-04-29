@@ -1,17 +1,20 @@
 import os
 from pathlib import Path
 
+import cv2
 import numpy as np
 import torch
 from PIL import Image
 from torch.utils.data import Dataset
 from torchvision import transforms
 
+resize_s = (700,700)
+
 transform_train = transforms.Compose(
     [
-        transforms.ToTensor(),
+        # transforms.ToTensor(),
         # transforms.RandomHorizontalFlip(),
-        transforms.Resize((224, 224), antialias=True),
+        # transforms.Resize(resize_s, antialias=True),
         # transforms.RandomRotation(10),
         # transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
     ]
@@ -19,8 +22,8 @@ transform_train = transforms.Compose(
 
 transform_test = transforms.Compose(
     [
-        transforms.ToTensor(), 
-        transforms.Resize((224, 224), antialias=True),
+        # transforms.ToTensor(), 
+        # transforms.Resize(resize_s, antialias=True),
         # transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
     ]
 )
@@ -49,7 +52,7 @@ class CVCClinicDBDataset(Dataset):
 
         self.transform = transform
 
-        self.mask_transform = transforms.Resize((224, 224), interpolation=Image.NEAREST)
+        self.mask_transform = transforms.Resize(resize_s, interpolation=Image.NEAREST)
 
         self.class_dict = {
             (0, 0, 0): 0,       # Background
@@ -83,7 +86,16 @@ class CVCClinicDBDataset(Dataset):
             image = self.transform(image)
         # mask = torch.tensor(mask, dtype=torch.long)  
 
-        return np.array(image).astype(np.float32), mask
+        # print('original image shape', np.array(image).shape)
+
+        image = cv2.resize(np.array(image), resize_s) / 255
+        image = (image - np.array([0.485, 0.456, 0.406]))/ np.array([0.229, 0.24, 0.225])
+        image = image.transpose(2, 0, 1)
+        # mask = mask.transpose(2, 0, 1)
+
+        # print('transformed image shape', image.shape)
+
+        return torch.tensor(np.array(image).astype(np.float32)), mask
     
 def get_dataset(
     subset="train", data_path=Path("/shared/projects/active_learning/cvc")

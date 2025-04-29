@@ -10,8 +10,9 @@ from alssl.al.train import ALTrainer
 from alssl.coldstart import coldstarts
 from alssl.data.base import ALDataModule
 from alssl.model.base import BaseALModel
-from alssl.model.dino_segm import LightningDinoSegmentation
-from alssl.model.swin_segm import LightningSwinSegmentation
+from alssl.model.dino_lora_segm import LightningDinoLoRaSegmentation
+# from alssl.model.dino_segm import LightningDinoSegmentation
+# from alssl.model.swin_segm import LightningSwinSegmentation
 from alssl.strategy import strategies
 
 ALTrainer, BaseALModel, ALDataModule
@@ -53,9 +54,10 @@ def run_exp(config: DictConfig) -> None:
     class Model(BaseALModel):
         def get_lightning_module(self):
             if config.training.backbone == 'dino':
-                return LightningDinoSegmentation
-            elif config.training.backbone == 'swin':
-                return LightningSwinSegmentation
+                return LightningDinoLoRaSegmentation
+            
+            # elif config.training.backbone == 'swin':
+            #     return LightningSwinSegmentation
         def get_hyperparameters(self):
             return {
                 'learning_rate':config.training.learning_rate,
@@ -106,7 +108,7 @@ def run_exp(config: DictConfig) -> None:
         # change for segmentation tasks
         config.coldstart.coldstart_params.num_classes = initial_train_size
 
-        config.strategy.strategy_params.num_classes = budget_size
+        # config.strategy.strategy_params.num_classes = budget_size
     
     # Initialize the Active Learning trainer
     trainer = ALTrainer(
