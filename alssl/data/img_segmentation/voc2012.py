@@ -99,8 +99,10 @@ class PascalVOCDataset(VOCSegmentation):
         return segmentation_mask
 
     def __getitem__(self, index: int) -> tuple[np.ndarray, np.ndarray]:
-        image = cv2.imread(self.images[index])
-        mask = cv2.imread(self.masks[index])
+        image_path = self.images[index]
+        mask_path = image_path.replace('JPEGImages', 'SegmentationObject').replace('jpg','png')
+        image = cv2.imread(image_path)
+        mask = cv2.imread(mask_path)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         mask = cv2.cvtColor(mask, cv2.COLOR_BGR2RGB)
 
