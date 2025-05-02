@@ -5,6 +5,8 @@ from typing import Optional
 import albumentations as A
 import cv2
 import numpy as np
+import torch
+from PIL import Image
 from torchvision import transforms
 from torchvision.datasets import VOCSegmentation
 
@@ -106,6 +108,7 @@ class PascalVOCDataset(VOCSegmentation):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         mask = cv2.cvtColor(mask, cv2.COLOR_BGR2RGB)
 
+        mask = cv2.resize(np.array(mask), resize_s)
         mask = self._convert_to_segmentation_mask(mask, self.use_index_label)
         if self.transform is not None:
             transformed = self.transform(image=image, mask=mask)
@@ -117,7 +120,7 @@ class PascalVOCDataset(VOCSegmentation):
         image = cv2.resize(np.array(image), resize_s) / 255
         image = (image - np.array([0.485, 0.456, 0.406]))/ np.array([0.229, 0.24, 0.225])
         image = image.transpose(2, 0, 1)
-        return image, mask
+        return torch.tensor(np.array(image).astype(np.float32)), mask
 
 
 def get_dataset(
