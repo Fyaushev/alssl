@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 
 def move_to_np(tensor: torch.Tensor):
-    return tensor.cpu().numpy()
+    return tensor.detach().cpu().float().numpy()
 
 def _init_arrays(num_samples, embeddings_shape, output_shape, is_segmentation):
     if not is_segmentation:
@@ -16,7 +16,7 @@ def _init_arrays(num_samples, embeddings_shape, output_shape, is_segmentation):
         all_embeddings = np.empty((num_samples, embeddings_shape[1]))
     else:
         ys = np.empty((num_samples, output_shape[-2], output_shape[-1]))
-        y_preds = np.empty((num_samples, output_shape[-3], output_shape[-2], output_shape[-1]))
+        y_preds = np.empty((num_samples, output_shape[-2], output_shape[-1]))
         all_embeddings = np.empty((num_samples, embeddings_shape[-1]))
     
     return ys, y_preds, all_embeddings
@@ -40,8 +40,14 @@ def predict(
     sample_idx = 0
     
     with torch.no_grad():
-        for x, y in tqdm(dataloader, total=len(dataloader), desc=f'strategy prediction {desc}:'):
-            x, y = x.to(device), y.to(device)
+        for batch in tqdm(dataloader, total=len(dataloader), desc=f'strategy prediction {desc}:'):
+            if len(batch) == 2:
+                x, y = batch
+                x, y = x.to(device), y.to(device)
+            else: # llm input
+                x = batch
+                y = batch['label']
+                msg = model.model.set_eval()
             y_pred, embeddings = map(move_to_np, model(x))
 
             batch_size = y.shape[0]
@@ -63,6 +69,8 @@ def predict(
 
                 if len(embeddings.shape) > 2:
                     embeddings = embeddings.mean(-2) #.mean(-1)
+                if is_segmentation:
+                    y_pred = np.argmax(y_pred, axis=-3)
 
                 ys[sample_idx:sample_idx + batch_size] = y_np
                 y_preds[sample_idx:sample_idx + batch_size, :] = y_pred

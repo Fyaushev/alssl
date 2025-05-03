@@ -36,3 +36,4 @@ settings.json
 
 # scripts
 scripts/*.json
+train/*.sh
