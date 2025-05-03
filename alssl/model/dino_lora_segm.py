@@ -19,7 +19,7 @@ class DinoLoRaSegmentation(nn.Module):
             encoder=encoder,
             r=3, # These are the same settings used in training
             emb_dim=768, # The base ViT embedding dim
-            img_dim=(490, 490), # For ease of use rescaling to a valid patch dimension 
+            img_dim=(280, 280), # For ease of use rescaling to a valid patch dimension 
             n_classes=num_classes, 
             use_fpn=True,
             use_lora=True,
@@ -64,7 +64,7 @@ class LightningDinoLoRaSegmentation(L.LightningModule):
         self.param_loss_beta = param_loss_beta
         self.learning_rate = learning_rate
         self.validation_losses = []
-        self.criterion = nn.CrossEntropyLoss(ignore_index=255)
+        self.criterion = nn.CrossEntropyLoss(ignore_index=-1)
         self.dice_loss_fn = DiceLoss()
         # self.miou = MeanIoU(num_classes=num_classes, per_class=True, include_background=True, input_format='index')
         self.num_classes = num_classes
@@ -166,7 +166,7 @@ class LightningDinoLoRaSegmentation(L.LightningModule):
         )
     
     def _calculate_miou(self, logits, masks):
-        return compute_iou_metric(logits, masks)
+        return compute_iou_metric(logits, masks, ignore_index=-1)
         # return self.miou(
         #     torch.argmax(logits, dim=1),
         #     masks, 
